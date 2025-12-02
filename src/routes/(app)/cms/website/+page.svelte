@@ -27,6 +27,7 @@
 						label_singular: 'Page',
 						folder: 'src/lib/content/pages',
 						create: true,
+						preview_path: '{{slug}}',
 						nested: {
 							depth: 3,
 							subfolders: false
