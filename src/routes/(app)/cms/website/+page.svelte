@@ -103,7 +103,8 @@
 														name: 'content',
 														label: 'Content',
 														widget: 'markdown',
-														buttons: ['bold', 'italic', 'link', 'quote']
+														buttons: ['bold', 'italic', 'link', 'quote'],
+														editor_components: []
 													},
 													{ name: 'photo', label: 'Photo', widget: 'file' },
 													{
@@ -157,7 +158,8 @@
 														name: 'content',
 														label: 'Content',
 														widget: 'markdown',
-														buttons: ['bold', 'italic']
+														buttons: ['bold', 'italic'],
+														editor_components: []
 													},
 													{
 														name: 'photos',
@@ -191,7 +193,8 @@
 														name: 'content',
 														label: 'Content',
 														widget: 'markdown',
-														buttons: ['bold', 'italic']
+														buttons: ['bold', 'italic'],
+														editor_components: []
 													}
 												]
 											},
@@ -218,7 +221,8 @@
 														name: 'content',
 														label: 'Content',
 														widget: 'markdown',
-														buttons: ['bold', 'italic']
+														buttons: ['bold', 'italic'],
+														editor_components: []
 													}
 												]
 											},
@@ -385,7 +389,8 @@
 													'link',
 													'bulleted-list',
 													'numbered-list'
-												]
+												],
+												editor_components: []
 											},
 											{ name: 'start', label: 'Start Date & Time', widget: 'datetime' },
 											{ name: 'end', label: 'End Date & Time', widget: 'datetime' }
@@ -427,7 +432,8 @@
 														name: 'description',
 														label: 'Description',
 														widget: 'markdown',
-														buttons: ['bold', 'italic', 'link', 'numbered-list', 'bulleted-list']
+														buttons: ['bold', 'italic', 'link', 'numbered-list', 'bulleted-list'],
+														editor_components: []
 													}
 												]
 											}
