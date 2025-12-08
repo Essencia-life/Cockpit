@@ -1,4 +1,4 @@
-import type { RequestHandler } from './$types';
+import type { RequestHandler } from '../../../../.svelte-kit/types/src/routes';
 import { env } from '$env/dynamic/private';
 
 // TODO: refactor duplicated code parts
@@ -34,7 +34,6 @@ const outputHTML = ({ provider = 'unknown', token, error, errorCode }: any) => {
       <!doctype html><html><body><script>
         (() => {
           window.addEventListener('message', ({ data, origin }) => {
-            console.log(data, origin);
             if (data === 'authorizing:${provider}') {
               window.opener?.postMessage(
                 'authorization:${provider}:${state}:${JSON.stringify(content)}',
@@ -42,7 +41,6 @@ const outputHTML = ({ provider = 'unknown', token, error, errorCode }: any) => {
               );
             }
           });
-          console.log('sending');
           window.opener?.postMessage('authorizing:${provider}', '*');
         })();
       </script></body></html>
@@ -58,17 +56,14 @@ const outputHTML = ({ provider = 'unknown', token, error, errorCode }: any) => {
 };
 
 /**
- * Handle the `callback` method, which is the second request in the authorization flow.
+ * Handle the `auth` method, which is the first request in the authorization flow.
  * @param {Request} request - HTTP request.
  * @returns {Promise<Response>} HTTP response.
  */
-const handleCallback = async (request: Request) => {
-	const { url, headers } = request;
+const handleAuth = async (request: Request) => {
+	const { url } = request;
 	const { origin, searchParams } = new URL(url);
-	const { code, state } = Object.fromEntries(searchParams);
-
-	const [, provider, csrfToken] =
-		headers.get('Cookie')?.match(/\bcsrf-token=([a-z-]+?)_([0-9a-f]{32})\b/) ?? [];
+	const { provider, site_id: domain } = Object.fromEntries(searchParams);
 
 	if (!provider || !supportedProviders.includes(provider as any)) {
 		return outputHTML({
@@ -77,23 +72,8 @@ const handleCallback = async (request: Request) => {
 		});
 	}
 
-	if (!code || !state) {
-		return outputHTML({
-			provider,
-			error: 'Failed to receive an authorization code. Please try again later.',
-			errorCode: 'AUTH_CODE_REQUEST_FAILED'
-		});
-	}
-
-	if (!csrfToken || state !== csrfToken) {
-		return outputHTML({
-			provider,
-			error: 'Potential CSRF attack detected. Authentication flow aborted.',
-			errorCode: 'CSRF_DETECTED'
-		});
-	}
-
 	const {
+		ALLOWED_DOMAINS,
 		CMS_GITHUB_CLIENT_ID,
 		CMS_GITHUB_CLIENT_SECRET,
 		CMS_GITHUB_HOSTNAME = 'github.com',
@@ -102,8 +82,24 @@ const handleCallback = async (request: Request) => {
 		CMS_GITLAB_HOSTNAME = 'gitlab.com'
 	} = env;
 
-	let tokenURL = '';
-	let requestBody = {};
+	// Check if the domain is whitelisted
+	if (
+		ALLOWED_DOMAINS &&
+		!ALLOWED_DOMAINS.split(/,/).some((str) =>
+			// Escape the input, then replace a wildcard for regex
+			(domain ?? '').match(new RegExp(`^${escapeRegExp(str.trim()).replace('\\*', '.+')}$`))
+		)
+	) {
+		return outputHTML({
+			provider,
+			error: 'Your domain is not allowed to use the authenticator.',
+			errorCode: 'UNSUPPORTED_DOMAIN'
+		});
+	}
+
+	// Generate a random string for CSRF protection
+	const csrfToken = globalThis.crypto.randomUUID().replaceAll('-', '');
+	let authURL = '';
 
 	// GitHub
 	if (provider === 'github') {
@@ -115,14 +111,16 @@ const handleCallback = async (request: Request) => {
 			});
 		}
 
-		tokenURL = `https://${CMS_GITHUB_HOSTNAME}/login/oauth/access_token`;
-		requestBody = {
-			code,
+		const params = new URLSearchParams({
 			client_id: CMS_GITHUB_CLIENT_ID,
-			client_secret: CMS_GITHUB_CLIENT_SECRET
-		};
+			scope: 'repo,user',
+			state: csrfToken
+		});
+
+		authURL = `https://${CMS_GITHUB_HOSTNAME}/login/oauth/authorize?${params.toString()}`;
 	}
 
+	// GitLab
 	if (provider === 'gitlab') {
 		if (!CMS_GITLAB_CLIENT_ID || !CMS_GITLAB_CLIENT_SECRET) {
 			return outputHTML({
@@ -132,52 +130,29 @@ const handleCallback = async (request: Request) => {
 			});
 		}
 
-		tokenURL = `https://${CMS_GITLAB_HOSTNAME}/oauth/token`;
-		requestBody = {
-			code,
+		const params = new URLSearchParams({
 			client_id: CMS_GITLAB_CLIENT_ID,
-			client_secret: CMS_GITLAB_CLIENT_SECRET,
-			grant_type: 'authorization_code',
-			redirect_uri: `${origin}/callback`
-		};
-	}
-
-	let response;
-	let token = '';
-	let error = '';
-
-	try {
-		response = await fetch(tokenURL, {
-			method: 'POST',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify(requestBody)
+			redirect_uri: `${origin}/callback`,
+			response_type: 'code',
+			scope: 'api',
+			state: csrfToken
 		});
-	} catch {
-		//
+
+		authURL = `https://${CMS_GITLAB_HOSTNAME}/oauth/authorize?${params.toString()}`;
 	}
 
-	if (!response) {
-		return outputHTML({
-			provider,
-			error: 'Failed to request an access token. Please try again later.',
-			errorCode: 'TOKEN_REQUEST_FAILED'
-		});
-	}
-
-	try {
-		({ access_token: token, error } = await response.json());
-	} catch {
-		return outputHTML({
-			provider,
-			error: 'Server responded with malformed data. Please try again later.',
-			errorCode: 'MALFORMED_RESPONSE'
-		});
-	}
-
-	return outputHTML({ provider, token, error });
+	// Redirect to the authorization server
+	return new Response('', {
+		status: 302,
+		headers: {
+			Location: authURL,
+			// Cookie expires in 10 minutes; Use `SameSite=Lax` to make sure the cookie is sent by the
+			// browser after redirect
+			'Set-Cookie':
+				`csrf-token=${provider}_${csrfToken}; ` +
+				`HttpOnly; Path=/; Max-Age=600; SameSite=Lax; Secure`
+		}
+	});
 };
 
 /**
@@ -189,5 +164,5 @@ const handleCallback = async (request: Request) => {
  * @see https://docs.gitlab.com/ee/api/oauth2.html#authorization-code-flow
  */
 export const GET: RequestHandler = ({ request }) => {
-	return handleCallback(request);
+	return handleAuth(request);
 };
