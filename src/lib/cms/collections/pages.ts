@@ -26,13 +26,15 @@ export default {
 			name: 'description',
 			label: 'Page description',
 			required: false,
-			hint: 'Relevant SEO & social media shares'
+			hint: 'Relevant SEO & social media sharing'
 		},
 		{
 			name: 'cover',
 			label: 'Page cover',
 			required: false,
-			hint: 'Relevant for social media shares'
+			hint: 'Relevant for social media sharing',
+			widget: 'file',
+			choose_url: false
 		},
 		{
 			name: 'body',
