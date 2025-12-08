@@ -4,7 +4,7 @@ export default {
 	name: 'events',
 	label: '🗓️ Events',
 	file: 'src/lib/content/events.json',
-	media_folder: 'src/lib/assets/media/events',
+	media_folder: '/src/lib/assets/media/events',
 	public_folder: 'media/events',
 	fields: [
 		{

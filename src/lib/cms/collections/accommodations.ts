@@ -4,7 +4,7 @@ export default {
 	name: 'accommodations',
 	label: '🛖️ Accommodations',
 	file: 'src/lib/content/accommodations.json',
-	media_folder: '/static/media/accommodations',
+	media_folder: '/src/lib/assets/media/accommodations',
 	public_folder: 'media/accommodations',
 	fields: [
 		{
