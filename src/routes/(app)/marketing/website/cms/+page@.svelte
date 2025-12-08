@@ -36,7 +36,7 @@
 						label_singular: 'Entity',
 						format: 'json',
 						editor: {
-							// preview: false
+							preview: false
 						},
 						files: [
 							homepage,
