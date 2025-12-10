@@ -57,7 +57,7 @@ export default {
 					]
 				},
 				{ name: 'slogan', label: 'Slogan' },
-				{ name: 'watchButton', label: 'Watch Button' }
+				{ name: 'watch_button', label: 'Watch Button' }
 			]
 		},
 		{
