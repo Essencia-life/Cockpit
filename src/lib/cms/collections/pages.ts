@@ -25,8 +25,7 @@ export default {
 		{
 			name: 'description',
 			label: 'Page description',
-			required: false,
-			hint: 'Relevant SEO & social media sharing'
+			hint: 'Relevant for SEO & social media sharing'
 		},
 		{
 			name: 'cover',

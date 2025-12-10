@@ -6,6 +6,22 @@ export default {
 	label: '🌐️ Homepage',
 	fields: [
 		{
+			label: 'SEO',
+			name: 'seo',
+			widget: 'object',
+			fields: [
+				{ name: 'title', label: 'Title' },
+				{ name: 'description', label: 'Description' },
+				{
+					name: 'cover',
+					label: 'Cover Image',
+					widget: 'file',
+					choose_url: false,
+					hint: 'Relevant for social media sharing'
+				}
+			]
+		},
+		{
 			label: 'Hero',
 			name: 'hero',
 			widget: 'object',
