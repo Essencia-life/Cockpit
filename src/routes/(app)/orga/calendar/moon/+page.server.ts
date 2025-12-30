@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
-import { EVENTS_ICAL } from '$env/static/private';
-import ical from 'ical';
+import { EVENTS_ICAL, RETREATS_ICAL, COMMUNITY_ICAL } from '$env/static/private';
+import ical from 'node-ical';
 
 /**
  * Calculates the last and next New Moon around a given date,
@@ -49,14 +49,13 @@ function getMoonPhases(refDate = new Date()) {
 		new Date(baseNewMoon.getTime() + (cycle + fraction) * synodicMonth * dayMs);
 
 	// Build current cycle phases
-	const currentCyclePhases: Record<string, { date: Date; emoji: string }> = {}; // TODO replace with array
-	for (const [phase, fraction] of Object.entries(phaseOffsets)) {
-		const date = calcPhaseDate(currentCycle, fraction);
-		currentCyclePhases[phase] = {
-			date,
+	const currentCyclePhases = Object.entries(phaseOffsets).map(([phase, fraction]) => {
+		return {
+			phase,
+			date: calcPhaseDate(currentCycle, fraction),
 			emoji: phaseEmojis[phase]
 		};
-	}
+	});
 
 	// Last and next New Moon
 	const lastNewMoonDate =
@@ -65,6 +64,12 @@ function getMoonPhases(refDate = new Date()) {
 			: calcPhaseDate(currentCycle - 1, 0);
 
 	const nextNewMoonDate = calcPhaseDate(currentCycle + 1, 0);
+
+	currentCyclePhases.push({
+		phase: 'nextNewMoon',
+		date: nextNewMoonDate,
+		emoji: phaseEmojis.newMoon
+	});
 
 	return {
 		lastNewMoon: { date: lastNewMoonDate, emoji: phaseEmojis.newMoon },
@@ -76,8 +81,11 @@ function getMoonPhases(refDate = new Date()) {
 export const load: PageServerLoad = async () => {
 	const moonPhases = getMoonPhases();
 
-	const response = await fetch(EVENTS_ICAL);
-	const calendar = ical.parseICS(await response.text());
+	// console.log(await (await fetch(EVENTS_ICAL)).text())
 
-	return { ...moonPhases, calendar };
+	const events = await ical.async.fromURL(EVENTS_ICAL);
+	const retreats = await ical.async.fromURL(RETREATS_ICAL);
+	const community = await ical.async.fromURL(COMMUNITY_ICAL);
+
+	return { ...moonPhases, events, retreats, community };
 };
