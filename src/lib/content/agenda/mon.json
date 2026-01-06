@@ -1,0 +1,34 @@
+{
+  "agenda": [
+    {
+      "start": "07:00",
+      "duration": "~1h",
+      "title": "Meditation",
+      "description": ""
+    },
+    {
+      "start": "08:00",
+      "duration": "1h",
+      "title": "Morning Practice",
+      "description": ""
+    },
+    {
+      "start": "09:45",
+      "duration": "15m",
+      "title": "Morning Circle",
+      "description": ""
+    },
+    {
+      "start": "10:00",
+      "duration": "1-2h",
+      "title": "Organizational Meeting",
+      "description": ""
+    },
+    {
+      "start": "14:00",
+      "duration": "1h",
+      "title": "Lunch Circle",
+      "description": ""
+    }
+  ]
+}
