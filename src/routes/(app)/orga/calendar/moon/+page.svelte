@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { VEvent } from 'node-ical';
 	import type { PageServerData } from './$types';
 	import { onMount } from 'svelte';
 
@@ -8,10 +7,6 @@
 	}
 
 	const { data }: Props = $props();
-
-	const events = $derived(Object.values(data.events).filter((it) => it.type === 'VEVENT'));
-	const retreats = $derived(Object.values(data.retreats).filter((it) => it.type === 'VEVENT'));
-	const community = $derived(Object.values(data.community).filter((it) => it.type === 'VEVENT'));
 
 	onMount(() => {
 		console.log('Last New Moon:', data.lastNewMoon);
@@ -39,7 +34,7 @@
 		return { left: x * 100 + '%', top: y * 100 + '%' };
 	}
 
-	function segement(event: VEvent) {
+	function segement(event: any) {
 		const start = data.nextNewMoon.date.getTime();
 		const end = data.lastNewMoon.date.getTime();
 		const total = end - start;
@@ -80,17 +75,17 @@
 		{/each}
 	</div>
 	<svg viewBox="0 -1 100 51" class="events" preserveAspectRatio="none">
-		{#each events as event}
+		{#each data.events as event}
 			<path d={segement(event)} />
 		{/each}
 	</svg>
 	<svg viewBox="0 -1 100 51" class="retreats" preserveAspectRatio="none">
-		{#each retreats as retreat}
+		{#each data.retreats as retreat}
 			<path d={segement(retreat)} />
 		{/each}
 	</svg>
 	<svg viewBox="0 -1 100 51" class="community" preserveAspectRatio="none">
-		{#each community as communityEvent}
+		{#each data.community as communityEvent}
 			<path d={segement(communityEvent)} />
 		{/each}
 	</svg>

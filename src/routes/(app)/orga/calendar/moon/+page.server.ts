@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { EVENTS_ICAL, RETREATS_ICAL, COMMUNITY_ICAL } from '$env/static/private';
-import ical from 'node-ical';
+import ical2json from 'ical2json';
 
 /**
  * Calculates the last and next New Moon around a given date,
@@ -81,11 +81,14 @@ function getMoonPhases(refDate = new Date()) {
 export const load: PageServerLoad = async () => {
 	const moonPhases = getMoonPhases();
 
-	// console.log(await (await fetch(EVENTS_ICAL)).text())
+	const eventsResponse = await fetch(EVENTS_ICAL);
+	const events = ical2json.convert(await eventsResponse.text()).VCALENDAR[0].VEVENT as any[];
+	const retreatsResponse = await fetch(RETREATS_ICAL);
+	const retreats = ical2json.convert(await retreatsResponse.text()).VCALENDAR[0].VEVENT as any[];
+	const communityResponse = await fetch(COMMUNITY_ICAL);
+	const community = ical2json.convert(await communityResponse.text()).VCALENDAR[0].VEVENT as any[];
 
-	const events = await ical.async.fromURL(EVENTS_ICAL);
-	const retreats = await ical.async.fromURL(RETREATS_ICAL);
-	const community = await ical.async.fromURL(COMMUNITY_ICAL);
+	// console.log(events, retreats, community);
 
 	return { ...moonPhases, events, retreats, community };
 };
