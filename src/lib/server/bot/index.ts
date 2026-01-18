@@ -1,11 +1,9 @@
-import { BOT_TOKEN } from "$env/static/private";
-import { Bot } from "grammy";
-import setup from "./setup";
-import channel from "./channel";
-import home from "./home";
+import { BOT_TOKEN } from '$env/static/private';
+import { Bot } from 'grammy';
+import { BotGroups } from '$lib/server/bot/groups.ts';
+import { AgendaBot } from '$lib/server/bot/agenda.ts';
 
 export const bot = new Bot(BOT_TOKEN);
 
-setup(bot);
-// await channel(bot);
-// await home(bot);
+export const botGroups = new BotGroups(bot);
+export const agendaBot = new AgendaBot(bot, botGroups);
