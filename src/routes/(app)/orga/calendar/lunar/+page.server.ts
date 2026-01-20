@@ -89,14 +89,16 @@ function byEvents(item: CalendarComponent) {
 	return item.type === 'VEVENT';
 }
 
-async function eventsByView(start: Date, end: Date, icalUrl: string): Promise<Event[]> {
+async function eventsByView(start: Date, end: Date, icalUrl: string, filterPrivate = false): Promise<Event[]> {
 	const calendarResponse = await ical.async.fromURL(icalUrl);
 	const icalEvents: VEvent[] = Object.values(calendarResponse).filter(byEvents);
 
-	// console.log(icalEvents);
-
 	return icalEvents
-		.filter(event => event.start.getTime() >= start.getTime() && event.start.getTime() <= end.getTime())
+		.filter(event => {
+			const between = event.start.getTime() >= start.getTime() && event.start.getTime() <= end.getTime();
+			const includePrivate = !filterPrivate || event.class !== 'PRIVATE';
+			return between && includePrivate;
+		})
 		.reduce((events, event) => {
 			if (event.rrule) {
 				event.rrule.between(start, end).forEach(date => {
@@ -123,7 +125,7 @@ export const load: PageServerLoad = async ({ url }) => {
 
 	const events = await eventsByView(moonPhases.lastNewMoon.date, moonPhases.nextNewMoon.date, EVENTS_ICAL);
 	const retreats = await eventsByView(moonPhases.lastNewMoon.date, moonPhases.nextNewMoon.date, RETREATS_ICAL);
-	const community = await eventsByView(moonPhases.lastNewMoon.date, moonPhases.nextNewMoon.date, COMMUNITY_ICAL);
+	const community = await eventsByView(moonPhases.lastNewMoon.date, moonPhases.nextNewMoon.date, COMMUNITY_ICAL, true);
 
 	return { ...moonPhases, events, retreats, community };
 };

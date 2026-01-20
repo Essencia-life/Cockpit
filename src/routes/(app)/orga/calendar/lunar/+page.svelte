@@ -1,9 +1,10 @@
 <script lang="ts">
 	import type { PageServerData } from './$types';
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount, tick } from 'svelte';
 	import { ArrowLeftIcon, ArrowRightIcon } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import { SvelteDate } from 'svelte/reactivity';
 
 	interface Props {
 		data: PageServerData;
@@ -11,32 +12,40 @@
 
 	const { data }: Props = $props();
 
-	const today = new Date();
+	let rotation = $state(0);
+	let navigating = $state();
+
+	const today = new SvelteDate();
 	const oneDay = 24 * 60 * 60 * 1000;
+
+	let todayInterval: number;
 
 	const events = $derived(data.events);
 	const retreats = $derived(data.retreats);
 	const community = $derived(data.community);
 	const todayPercent = $derived.by(() => {
 		const percentage = percent(today);
-		return percentage < 0 ? 1 : percentage > 1 ? 0 : percentage;
+		return percentage < 0 ? 0 : percentage > 1 ? 1 : percentage;
 	});
 
 	onMount(() => {
-		// console.log('Last New Moon:', data.lastNewMoon);
-		// console.log('Next New Moon:', data.nextNewMoon);
-		// console.log('Current Cycle Phases:');
-		// console.table(data.currentCyclePhases);
-		console.log(data.events, data.retreats, data.community);
+		todayInterval = window.setInterval(() => today.setTime(Date.now()), 60_000);
 	});
 
-	function markerPosition(date: Date) {
-		const start = data.nextNewMoon.date.getTime();
-		const end = data.lastNewMoon.date.getTime();
-		const total = end - start;
-		const progress = (date.getTime() - start) / total;
+	onDestroy(() => {
+		if (todayInterval) {
+			window.clearInterval(todayInterval);
+		}
+	});
 
-		const angle = progress * Math.PI;
+	interface Event {
+		start: Date;
+		end: Date;
+		title: string;
+	}
+
+	function markerPosition(date: Date) {
+		const angle = toAngle(date);
 
 		const x = (Math.cos(angle) + 1) / 2;
 		let y = 1 - Math.sin(angle);
@@ -48,25 +57,21 @@
 		return { left: x * 100 + '%', top: y * 100 + '%' };
 	}
 
-	interface Event {
-		start: Date;
-		end: Date;
-		title: string;
-	}
-
 	function percent(date: Date) {
-		const start = data.nextNewMoon.date.getTime();
-		const end = data.lastNewMoon.date.getTime();
+		const start = data.lastNewMoon.date.getTime();
+		const end = data.nextNewMoon.date.getTime();
 		const total = end - start;
 
 		return (date.getTime() - start) / total;
 	}
 
+	function toAngle(date: Date) {
+		return (1 - percent(date)) * Math.PI;
+	}
+
 	function segement(event: Event) {
 		const rangeStart = event.start;
 		const rangeEnd = event.end;
-
-		const toAngle = (date: Date) => percent(date) * Math.PI;
 
 		const a1 = toAngle(rangeStart);
 		const a2 = toAngle(rangeEnd);
@@ -99,7 +104,12 @@
 	async function prev() {
 		const url = new URL(page.url);
 		url.searchParams.set('refDate', data.lastNewMoon.date.toISOString());
-		goto(url);
+		rotation += 180;
+		navigating = true;
+		await goto(url);
+		rotation += 180;
+		await tick();
+		navigating = undefined;
 	}
 
 	async function next() {
@@ -108,14 +118,19 @@
 			'refDate',
 			new Date(data.nextNewMoon.date.getTime() + oneDay).toISOString()
 		);
-		goto(url);
+		rotation -= 180;
+		navigating = true;
+		await goto(url);
+		rotation -= 180;
+		await tick();
+		navigating = undefined;
 	}
 </script>
 
 {#snippet segementText(event: Event)}
 	{@const { top, left } = markerPosition(event.start)}
 	{@const beforeFullMoon = event.start.getTime() < data.fullMoon!.date.getTime()}
-	<g transform="translate({beforeFullMoon ? -1 : 1}, 0)">
+	<g transform="translate({beforeFullMoon ? -1 : 1}, 0)" hidden={navigating}>
 		<text x={left} y={top} font-size="2" text-anchor={beforeFullMoon ? 'end' : 'start'}>
 			{#if !beforeFullMoon}
 				{formatDate(event.start)}
@@ -130,8 +145,9 @@
 
 <h1 class="h3">Lunar Calendar</h1>
 
-<div class="calendar">
-	<div class="arc" style:--value={todayPercent}></div>
+<div class="calendar" style:--rotation="{rotation}deg">
+	<div class="background" style:--value={todayPercent}></div>
+	<div class="arc"></div>
 	<div class="moon-phases">
 		{#each data.cyclePhases as { phase, date, emoji } (phase)}
 			{@const { top, left } = markerPosition(date)}
@@ -140,16 +156,22 @@
 	</div>
 	<svg viewBox="0 0 100 50" preserveAspectRatio="none">
 		{#each retreats as retreat}
-			{@render segementText(retreat)}
-			<path class="retreat" d={segement(retreat)} />
+			<g class="segment retreat">
+				{@render segementText(retreat)}
+				<path d={segement(retreat)} />
+			</g>
 		{/each}
 		{#each events as event}
-			{@render segementText(event)}
-			<path class="event" d={segement(event)} />
+			<g class="segment event">
+				{@render segementText(event)}
+				<path d={segement(event)} />
+			</g>
 		{/each}
 		{#each community as communityEvent}
-			{@render segementText(communityEvent)}
-			<path class="community" d={segement(communityEvent)} />
+			<g class="segment community">
+				{@render segementText(communityEvent)}
+				<path d={segement(communityEvent)} />
+			</g>
 		{/each}
 	</svg>
 </div>
@@ -159,6 +181,11 @@
 		<ArrowLeftIcon size={18} />
 		<span>Previous</span>
 	</button>
+	<div>
+		{data.lastNewMoon.date.toLocaleDateString('de')}
+		&mdash;
+		{data.nextNewMoon.date.toLocaleDateString('de')}
+	</div>
 	<button type="button" class="btn preset-filled btn-sm" onclick={next}>
 		<span>Next</span>
 		<ArrowRightIcon size={18} />
@@ -171,6 +198,7 @@
 	}
 
 	.calendar {
+		--rotation: 0deg;
 		position: relative;
 		width: 100%;
 		aspect-ratio: 2 / 1;
@@ -183,22 +211,37 @@
 		--space: 0;
 		position: absolute;
 		inset: var(--space) var(--space) 0;
+		transition: transform 300ms ease-out;
+		transform-origin: bottom center;
 	}
 
-	.arc {
+	.arc,
+	.background {
 		--space: 14em;
 		aspect-ratio: 1;
 		border-radius: 100%;
 		border: 1px solid #ccc;
+	}
+
+	.arc {
+		border: 1px solid #ccc;
+	}
+
+	.background {
+		--space: 14em;
+		aspect-ratio: 1;
+		border-radius: 100%;
 		background: conic-gradient(
 			from -90deg,
-			rgba(0 0 0 / 2%) calc(var(--value) * 360deg),
+			rgba(0 0 0 / 2%) calc(var(--value) * 180deg),
 			transparent 0
 		);
+		transform: rotate(var(--rotation));
 	}
 
 	.moon-phases {
 		--space: 16em;
+		transform: rotate(var(--rotation));
 	}
 
 	.moon-phases > div {
@@ -211,30 +254,31 @@
 	.calendar > svg {
 		--space: 13em;
 		overflow: visible;
+		transform: rotate(var(--rotation));
 	}
 
-	svg > path {
+	.segment path {
 		fill: none;
 		transition: stroke-width 100ms ease-in-out;
 	}
 
-	svg > path:hover {
+	.segment:hover path {
 		stroke-width: 2;
 	}
 
-	svg > path:not(:hover) {
+	.segment:not(:hover) path {
 		opacity: 0.5;
 	}
 
-	path.event {
+	.segment.event path {
 		stroke: skyblue;
 	}
 
-	path.retreat {
+	.segment.retreat path {
 		stroke: orange;
 	}
 
-	path.community {
+	.segment.community path {
 		stroke: green;
 	}
 
