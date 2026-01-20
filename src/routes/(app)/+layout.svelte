@@ -28,11 +28,11 @@
 				</Navigation.Menu>
 				<Navigation.Menu>
 					<a
-						href={resolve('/orga/calendar/moon')}
+						href={resolve('/orga/calendar/lunar')}
 						class="btn w-full justify-start px-2 hover:preset-tonal"
 					>
 						<Moon class="size-4" />
-						<span>Moon calendar</span>
+						<span>Lunar Calendar</span>
 					</a>
 				</Navigation.Menu>
 			</Navigation.Group>

@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { EVENTS_ICAL, RETREATS_ICAL, COMMUNITY_ICAL } from '$env/static/private';
-import ical from 'node-ical';
+import ical, { type CalendarComponent, type CalendarResponse, type VEvent } from 'node-ical';
 
 /**
  * Calculates the last and next New Moon around a given date,
@@ -49,7 +49,7 @@ function getMoonPhases(refDate = new Date()) {
 		new Date(baseNewMoon.getTime() + (cycle + fraction) * synodicMonth * dayMs);
 
 	// Build current cycle phases
-	const currentCyclePhases = Object.entries(phaseOffsets).map(([phase, fraction]) => {
+	const cyclePhases = Object.entries(phaseOffsets).map(([phase, fraction]) => {
 		return {
 			phase,
 			date: calcPhaseDate(currentCycle, fraction),
@@ -65,7 +65,7 @@ function getMoonPhases(refDate = new Date()) {
 
 	const nextNewMoonDate = calcPhaseDate(currentCycle + 1, 0);
 
-	currentCyclePhases.push({
+	cyclePhases.push({
 		phase: 'nextNewMoon',
 		date: nextNewMoonDate,
 		emoji: phaseEmojis.newMoon
@@ -74,18 +74,56 @@ function getMoonPhases(refDate = new Date()) {
 	return {
 		lastNewMoon: { date: lastNewMoonDate, emoji: phaseEmojis.newMoon },
 		nextNewMoon: { date: nextNewMoonDate, emoji: phaseEmojis.newMoon },
-		currentCyclePhases
+		fullMoon: cyclePhases.find(phase => phase.phase === 'fullMoon'),
+		cyclePhases
 	};
 }
 
-export const load: PageServerLoad = async () => {
-	const moonPhases = getMoonPhases();
+interface Event {
+	start: Date;
+	end: Date;
+	title: string;
+}
 
-	// console.log(await (await fetch(EVENTS_ICAL)).text())
+function byEvents(item: CalendarComponent) {
+	return item.type === 'VEVENT';
+}
 
-	const events = await ical.async.fromURL(EVENTS_ICAL);
-	const retreats = await ical.async.fromURL(RETREATS_ICAL);
-	const community = await ical.async.fromURL(COMMUNITY_ICAL);
+async function eventsByView(start: Date, end: Date, icalUrl: string): Promise<Event[]> {
+	const calendarResponse = await ical.async.fromURL(icalUrl);
+	const icalEvents: VEvent[] = Object.values(calendarResponse).filter(byEvents);
+
+	// console.log(icalEvents);
+
+	return icalEvents
+		.filter(event => event.start.getTime() >= start.getTime() && event.start.getTime() <= end.getTime())
+		.reduce((events, event) => {
+			if (event.rrule) {
+				event.rrule.between(start, end).forEach(date => {
+					events.push({
+						title: event.summary,
+						start: date,
+						end: new Date(date.getTime() + event.end.getTime() - event.start.getTime()),
+					});
+				});
+			} else {
+				events.push({
+					title: event.summary,
+					start: event.start,
+					end: event.end,
+				});
+			}
+			return events;
+		}, [] as Event[]);
+}
+
+export const load: PageServerLoad = async ({ url }) => {
+	const refDate = url.searchParams.get('refDate');
+	const moonPhases = getMoonPhases(refDate ? new Date(refDate) : new Date());
+
+	const events = await eventsByView(moonPhases.lastNewMoon.date, moonPhases.nextNewMoon.date, EVENTS_ICAL);
+	const retreats = await eventsByView(moonPhases.lastNewMoon.date, moonPhases.nextNewMoon.date, RETREATS_ICAL);
+	const community = await eventsByView(moonPhases.lastNewMoon.date, moonPhases.nextNewMoon.date, COMMUNITY_ICAL);
 
 	return { ...moonPhases, events, retreats, community };
 };
