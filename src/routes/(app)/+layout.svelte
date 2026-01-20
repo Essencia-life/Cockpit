@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { Navigation } from '@skeletonlabs/skeleton-svelte';
-	import { Moon, Globe, ClipboardList } from '@lucide/svelte';
+	import { Moon, Globe, ClipboardList, CalendarRange } from '@lucide/svelte';
 
 	let { children } = $props();
 </script>
@@ -19,7 +19,7 @@
 			<!--				</Navigation.Menu>-->
 			<!--			</Navigation.Group>-->
 			<Navigation.Group>
-				<Navigation.Label class="pl-2 capitalize">Orga</Navigation.Label>
+				<Navigation.Label class="pl-2 capitalize">Organization</Navigation.Label>
 				<Navigation.Menu>
 					<a href={resolve('/orga')} class="btn w-full justify-start px-2 hover:preset-tonal">
 						<ClipboardList class="size-4" />
@@ -33,6 +33,15 @@
 					>
 						<Moon class="size-4" />
 						<span>Lunar Calendar</span>
+					</a>
+				</Navigation.Menu>
+				<Navigation.Menu>
+					<a
+						href={resolve('/orga/calendar/week')}
+						class="btn w-full justify-start px-2 hover:preset-tonal"
+					>
+						<CalendarRange class="size-4" />
+						<span>Week Planing</span>
 					</a>
 				</Navigation.Menu>
 			</Navigation.Group>
