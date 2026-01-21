@@ -9,6 +9,7 @@ export const POST = webhookCallback(bot, 'sveltekit', {
 });
 
 export const PUT: RequestHandler = async ({ url }) => {
+	await bot.api.deleteWebhook();
 	const success = await bot.api.setWebhook(url.toString(), {
 		secret_token: BOT_SECRET_TOKEN,
 		allowed_updates: [

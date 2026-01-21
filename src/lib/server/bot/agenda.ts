@@ -42,19 +42,17 @@ export class AgendaBot {
 				)
 			});
 		} else {
-			console.warn('No agenda for today');
+			console.info('No agenda for today');
 		}
 	}
 
 	public async updateAgenda(date: Date, messageId: number) {
 		const groups = await this.getGroups();
 
-		console.log(`Update agenda for date=${date} messageId=${messageId}`);
+		console.info(`Update agenda for date=${date} messageId=${messageId}`);
 
 		const events = await this.getEventsByDate(date);
 		const text = formatAgenda(date, events);
-
-		console.log(events);
 
 		try {
 			await this.bot.api.editMessageText(groups.Home, messageId, text, {
@@ -66,7 +64,7 @@ export class AgendaBot {
 				)
 			});
 		} catch (err) {
-			console.warn(err);
+			console.error(err);
 		}
 	}
 
@@ -83,6 +81,7 @@ export class AgendaBot {
 	private async getEventsByDate(date: Date) {
 		const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 		const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+
 		const events = await ical.async.fromURL(EVENTS_ICAL);
 		const communityEvents = await ical.async.fromURL(COMMUNITY_ICAL);
 
@@ -92,15 +91,19 @@ export class AgendaBot {
 				if (entry.type === 'VEVENT') {
 					if (entry.start.toDateString() === date.toDateString()) {
 						events.push(entry);
-					} else if (entry.rrule && entry.rrule.between(startOfDay, endOfDay, true).length) {
+					} else if (entry.rrule?.between(new Date(startOfDay), new Date(endOfDay)).length) {
+						const { tz } = entry.start;
+
+						const start = Object.assign(new Date(startOfDay), { tz });
+						start.setHours(entry.start.getHours(), entry.start.getMinutes());
+
+						const end = Object.assign(new Date(startOfDay), { tz });
+						end.setHours(entry.end.getHours(), entry.end.getMinutes());
+
 						events.push({
 							...entry,
-							start: new Date(
-								startOfDay.setHours(entry.start.getHours(), entry.start.getMinutes())
-							) as DateWithTimeZone,
-							end: new Date(
-								startOfDay.setHours(entry.end.getHours(), entry.end.getMinutes())
-							) as DateWithTimeZone
+							start,
+							end
 						});
 					}
 				}
