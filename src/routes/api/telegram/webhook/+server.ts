@@ -13,7 +13,7 @@ export const PUT: RequestHandler = async ({ url }) => {
 	const success = await bot.api.setWebhook(url.toString(), {
 		secret_token: BOT_SECRET_TOKEN,
 		allowed_updates: [
-			// 'message',
+			'message',
 			// 'edited_message',
 			// "channel_post",
 			// "edited_channel_post",
