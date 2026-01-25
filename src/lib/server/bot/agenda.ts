@@ -13,8 +13,12 @@ export class AgendaBot {
 				const date = new Date(ctx.match.groups!.date);
 				const messageId = parseInt(ctx.match.groups!.messageId);
 
-				await this.updateAgenda(date, messageId);
-				await this.bot.api.answerCallbackQuery(ctx.callbackQuery.id);
+				try {
+					await this.updateAgenda(date, messageId);
+					await this.bot.api.answerCallbackQuery(ctx.callbackQuery.id);
+				} catch (err) {
+					console.error(err);
+				}
 			}
 		});
 	}
