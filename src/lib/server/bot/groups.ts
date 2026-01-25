@@ -85,9 +85,10 @@ export class BotGroups {
 
 		bot.on('my_chat_member', async (ctx) => {
 			const { status } = ctx.myChatMember.new_chat_member;
-			const [botConfig] = (await redis.json.get<[BotConfig]>(storageKey, '$')) ?? [];
+			const groups = await this.getGroups();
 
-			if (status === 'member' && (!botConfig || Object.values(botConfig).includes(ctx.chatId))) {
+			if (status === 'member' && (!groups || !Object.values(groups).includes(ctx.chatId))) {
+				console.warn(`Chat Id ${ctx.chatId} is not in the list of ${Object.values(groups!)}`);
 				await bot.api.leaveChat(ctx.chatId);
 			}
 		});
