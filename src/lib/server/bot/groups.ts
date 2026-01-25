@@ -8,12 +8,15 @@ export enum ChatType {
 	Home,
 	Legacy,
 	Channel,
-	CarSharing
+	CarSharing,
+	HomeOrganizationThread
 }
 
 export type BotConfig = {
 	[chatType in keyof typeof ChatType]: number;
 };
+
+const REPLY_ORGA_THREAD = 'Organization Thread ID:';
 
 export class BotGroups {
 	private botConfig?: BotConfig;
@@ -68,9 +71,15 @@ export class BotGroups {
 					await redis.json.set(storageKey, '$', { [ChatType[request_id]]: chat_id }, { nx: true });
 				}
 
-				await ctx.reply('Saved', {
-					reply_markup: { remove_keyboard: true }
-				});
+				if (request_id === ChatType.Home) {
+					await ctx.reply(REPLY_ORGA_THREAD, {
+						reply_markup: { force_reply: true }
+					});
+				} else {
+					await ctx.reply('Saved', {
+						reply_markup: { remove_keyboard: true }
+					});
+				}
 			}
 		});
 
@@ -80,6 +89,24 @@ export class BotGroups {
 
 			if (status === 'member' && (!botConfig || Object.values(botConfig).includes(ctx.chatId))) {
 				await bot.api.leaveChat(ctx.chatId);
+			}
+		});
+
+		bot.on('message:text', async (ctx) => {
+			if (!ctx.message.reply_to_message) return;
+
+			if (ctx.message.reply_to_message.text === REPLY_ORGA_THREAD) {
+				const threadId = Number(ctx.message.text);
+				if (Number.isNaN(threadId)) {
+					await ctx.reply('Not a valid thread id');
+				} else {
+					await redis.json.set(
+						storageKey,
+						`$.${ChatType[ChatType.HomeOrganizationThread]}`,
+						JSON.stringify(threadId)
+					);
+					await ctx.reply(`Saved.`);
+				}
 			}
 		});
 	}

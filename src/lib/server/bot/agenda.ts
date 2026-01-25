@@ -1,5 +1,5 @@
 import { COMMUNITY_ICAL, EVENTS_ICAL } from '$env/static/private';
-import ical, { type DateWithTimeZone, type VEvent } from 'node-ical';
+import ical, { type VEvent } from 'node-ical';
 import { type Bot, InlineKeyboard } from 'grammy';
 import type { BotGroups } from '$lib/server/bot/groups.ts';
 
@@ -35,11 +35,10 @@ export class AgendaBot {
 			const message = await this.bot.api.sendMessage(
 				groups.Home,
 				formatAgenda(tomorrow, tomorrowEvents),
-				{ parse_mode: 'HTML' }
+				{ parse_mode: 'HTML', message_thread_id: groups.HomeOrganizationThread }
 			);
 
 			await this.bot.api.editMessageReplyMarkup(groups.Home, message.message_id, {
-				// TODO: add thread id
 				reply_markup: new InlineKeyboard().text(
 					'🔁️ Refresh',
 					`agenda:${tomorrow.toISOString().substring(0, 10)}:${message.message_id}`
