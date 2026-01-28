@@ -8,7 +8,9 @@ export class AgendaBot {
 		private readonly bot: Bot,
 		private readonly botGroups: BotGroups
 	) {
-		this.bot.callbackQuery(/^agenda:(?<date>\d{4}-\d{2}-\d{2}):(?<messageId>\d+)/, async (ctx) => {
+		const morningPractiseReply = 'Please let me know what morning practise you want to offer';
+
+		bot.callbackQuery(/^agenda:(?<date>\d{4}-\d{2}-\d{2}):(?<messageId>\d+)$/, async (ctx) => {
 			if (typeof ctx.match === 'object' && 'groups' in ctx.match) {
 				const date = new Date(ctx.match.groups!.date);
 				const messageId = parseInt(ctx.match.groups!.messageId);
@@ -19,7 +21,59 @@ export class AgendaBot {
 				} catch (err) {
 					console.error(err);
 				}
+
+				await ctx.answerCallbackQuery();
 			}
+		});
+
+		bot.callbackQuery(/^plan:(?<date>\d{4}-\d{2}-\d{2}):(?<messageId>\d+):(?<task>\w+)$/, async (ctx) => {
+			if (typeof ctx.match === 'object' && 'groups' in ctx.match) {
+				const date = new Date(ctx.match.groups!.date);
+				const messageId = parseInt(ctx.match.groups!.messageId);
+				const task = ctx.match.groups!.task;
+				const userId = ctx.from!.id;
+
+				console.log('Save task', { messageId, date, task, userId });
+
+				// TODO check if task is free, if not alert, remove if same user
+				// TODO save task
+
+				await ctx.answerCallbackQuery();
+			}
+		});
+
+		bot.command('start', async ctx => {
+			console.log(ctx.match);
+
+			const match = ctx.match.match(/^practise_(?<date>\d{4}-\d{2}-\d{2})_(?<messageId>\d+)$/);
+
+			if (match !== null && 'groups' in match) {
+				const date = new Date(match.groups!.date);
+				const messageId = parseInt(match.groups!.messageId);
+				const userId = ctx.from!.id;
+
+				console.log('Save facilitator', { messageId, date, userId });
+				// TODO save facilitator
+
+				await ctx.reply(`${morningPractiseReply}: \`${date.toISOString().substring(0, 10)}-${messageId}\``, {
+					parse_mode: 'MarkdownV2',
+					reply_markup: { force_reply: true }
+				});
+			}
+		});
+
+		bot.on('message:text', async (ctx, next) => {
+			if (!ctx.message.reply_to_message?.text || !ctx.message.reply_to_message.text.startsWith(morningPractiseReply)) return next();
+
+			const [, dateStr, messageIdStr] = ctx.message.reply_to_message.text.match(/(\d{4}-\d{2}-\d{2})-(\d+)/) ?? [];
+			const date = new Date(dateStr);
+			const messageId = parseInt(messageIdStr);
+			const practise = ctx.message.text;
+
+			console.log('Save practise', { messageId, date, practise });
+			// TODO save practise
+
+			await ctx.react('👍');
 		});
 	}
 
@@ -59,7 +113,6 @@ export class AgendaBot {
 
 		try {
 			await this.bot.api.editMessageText(groups.Home, messageId, text, {
-				// TODO: add thread id
 				parse_mode: 'HTML',
 				reply_markup: new InlineKeyboard().text(
 					'🔁️ Refresh',
@@ -69,6 +122,37 @@ export class AgendaBot {
 		} catch (err) {
 			console.error(err);
 		}
+	}
+
+	public async sendWeekPlan() {
+		const groups = await this.getGroups();
+
+		const today = new Date();
+		const weekDutyStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay() + 9);
+
+		for (let i = 0; i < 7; i++) {
+			if (i === 4 || i == 5) {
+				continue;
+			}
+
+			const date = new Date(weekDutyStart.getFullYear(), weekDutyStart.getMonth(), weekDutyStart.getDate() + i);
+
+			const message = await this.bot.api.sendMessage(groups.Home, formatDayPlan(date, []), { parse_mode: 'HTML' });
+			const dateStr = date.toISOString().substring(0, 10);
+			const key = (task: string) => `plan:${dateStr}:${message.message_id}:${task}`;
+
+			console.log(`https://t.me/EssenciaOrgaBot?start=practise_${dateStr}_${message.message_id}`);
+
+			await this.bot.api.editMessageReplyMarkup(groups.Home, message.message_id, {
+				reply_markup: new InlineKeyboard()
+					.row(InlineKeyboard.url('Morning Practise', `https://t.me/EssenciaOrgaBot?start=practise_${dateStr}_${message.message_id}`))
+					.row(InlineKeyboard.text('Lunch Chef', key('chef')))
+					.row(InlineKeyboard.text('Lunch Co-Chef', key('chef2')))
+					.row(InlineKeyboard.text('Lunch Cleaning', key('cleaner')))
+			});
+		}
+
+		await this.bot.api.sendMessage(groups.Home, '✍️ Please sign in for upcomming duties above before Monday morning planning meeting.');
 	}
 
 	private async getGroups() {
@@ -171,4 +255,18 @@ function formatAgenda(date: Date, events: VEvent[]) {
 	return `🗓️ <b>Agenda for ${date.toLocaleDateString('en', { weekday: 'long' })}</b>
 
 ${events.map(formatEvent).join('\n\n')}`;
+}
+
+function formatDayPlan(date: Date, events: VEvent[]) {
+	// TODO filter events by date and adapt message accordingly
+	return `<b>${date.toLocaleDateString('en', { weekday: 'long' })} / ${date.toLocaleDateString('pt', { weekday: 'long', day: 'numeric', month: 'numeric' })}</b>
+
+<u>Morning Practise</u>
+🤸 ❓
+
+<u>Lunch</u>
+🧑‍🍳 ❓
+
+<u>Lunch Cleaning</u>
+🧽 ❓`
 }

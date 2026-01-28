@@ -93,21 +93,19 @@ export class BotGroups {
 			}
 		});
 
-		bot.on('message:text', async (ctx) => {
-			if (!ctx.message.reply_to_message) return;
+		bot.on('message:text', async (ctx, next) => {
+			if (!ctx.message.reply_to_message?.text || ctx.message.reply_to_message.text !== REPLY_ORGA_THREAD) return next();
 
-			if (ctx.message.reply_to_message.text === REPLY_ORGA_THREAD) {
-				const threadId = Number(ctx.message.text);
-				if (Number.isNaN(threadId)) {
-					await ctx.reply('Not a valid thread id');
-				} else {
-					await redis.json.set(
-						storageKey,
-						`$.${ChatType[ChatType.HomeOrganizationThread]}`,
-						JSON.stringify(threadId)
-					);
-					await ctx.reply(`Saved.`);
-				}
+			const threadId = Number(ctx.message.text);
+			if (Number.isNaN(threadId)) {
+				await ctx.reply('Not a valid thread id');
+			} else {
+				await redis.json.set(
+					storageKey,
+					`$.${ChatType[ChatType.HomeOrganizationThread]}`,
+					JSON.stringify(threadId)
+				);
+				await ctx.reply(`Saved.`);
 			}
 		});
 	}
