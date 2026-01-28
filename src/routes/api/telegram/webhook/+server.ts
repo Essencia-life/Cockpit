@@ -29,6 +29,7 @@ export const PUT: RequestHandler = async ({ url }) => {
 			// "purchased_paid_media",
 			// "poll",
 			// "poll_answer",
+			'chat_member',
 			'my_chat_member'
 			// "chat_join_request",
 			// "chat_boost",

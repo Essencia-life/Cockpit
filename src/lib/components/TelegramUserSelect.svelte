@@ -9,9 +9,9 @@
 	import type { RemoteFormField } from '@sveltejs/kit';
 
 	interface Props {
-		field: RemoteFormField<number>;
+		field: RemoteFormField<string>;
 		placeholder: string;
-		value: number;
+		value: string;
 	}
 
 	let { placeholder, field, value }: Props = $props();
@@ -24,7 +24,7 @@
 		useListCollection({
 			items: items,
 			itemToString: (item) => item.first_name,
-			itemToValue: (item) => String(item.id)
+			itemToValue: (item) => item.id.toString()
 		})
 	);
 
@@ -33,22 +33,27 @@
 	};
 
 	const onInputValueChange: ComboboxRootProps['onInputValueChange'] = (event) => {
-		inputValue = event.inputValue;
+		if (event.inputValue.length === 0) {
+			value = '';
+		} else {
+			items = data.filter((item) => {
+				const v = event.inputValue.toLowerCase();
+				return (
+					item.first_name.toLowerCase().includes(v) ||
+					item.last_name?.toLowerCase().includes(v) ||
+					item.username?.toLowerCase().includes(v)
+				);
+			});
 
-		const filtered = data.filter((item) => {
-			const v = event.inputValue.toLowerCase();
-			return (
-				item.first_name.toLowerCase().includes(v) ||
-				item.last_name?.toLowerCase().includes(v) ||
-				item.username?.toLowerCase().includes(v)
-			);
-		});
-
-		items = filtered.length > 0 ? filtered : data;
+			if (items.length === 0) {
+				value = JSON.stringify({ first_name: event.inputValue });
+			}
+		}
 	};
 
 	const onValueChange: ComboboxRootProps['onValueChange'] = (event) => {
-		value = event.value[0] ?? null;
+		const id = event.value[0];
+		value = id && JSON.stringify(collection.find(id));
 	};
 
 	$effect(() => {
@@ -57,7 +62,7 @@
 			return;
 		}
 
-		const item = collection.find(value.toString());
+		const item = JSON.parse(value);
 		inputValue = item ? item.first_name : '';
 	});
 </script>
@@ -69,8 +74,8 @@
 	{onInputValueChange}
 	{onValueChange}
 	inputBehavior="autohighlight"
-	value={value ? [value] : []}
 	{inputValue}
+	allowCustomValue
 >
 	<Combobox.Control>
 		<Combobox.Input />
@@ -95,4 +100,4 @@
 	</Portal>
 </Combobox>
 
-<input hidden bind:value {...field.as('number')} />
+<input hidden bind:value {...field.as('text')} />

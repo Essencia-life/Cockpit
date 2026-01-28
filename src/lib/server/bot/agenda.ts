@@ -8,7 +8,7 @@ export class AgendaBot {
 		private readonly bot: Bot,
 		private readonly botGroups: BotGroups
 	) {
-		this.bot.callbackQuery(/^agenda:(?<date>\d{4}-\d{2}-\d{2}):(?<messageId>\d+)/, async (ctx) => {
+		bot.callbackQuery(/^agenda:(?<date>\d{4}-\d{2}-\d{2}):(?<messageId>\d+)$/, async (ctx) => {
 			if (typeof ctx.match === 'object' && 'groups' in ctx.match) {
 				const date = new Date(ctx.match.groups!.date);
 				const messageId = parseInt(ctx.match.groups!.messageId);
@@ -19,6 +19,8 @@ export class AgendaBot {
 				} catch (err) {
 					console.error(err);
 				}
+
+				await ctx.answerCallbackQuery();
 			}
 		});
 	}
@@ -35,7 +37,7 @@ export class AgendaBot {
 			const message = await this.bot.api.sendMessage(
 				groups.Home,
 				formatAgenda(tomorrow, tomorrowEvents),
-				{ parse_mode: 'HTML', message_thread_id: groups.HomeOrganizationThread }
+				{ parse_mode: 'HTML', message_thread_id: groups.HomeDailyInfoThread }
 			);
 
 			await this.bot.api.editMessageReplyMarkup(groups.Home, message.message_id, {
@@ -59,7 +61,6 @@ export class AgendaBot {
 
 		try {
 			await this.bot.api.editMessageText(groups.Home, messageId, text, {
-				// TODO: add thread id
 				parse_mode: 'HTML',
 				reply_markup: new InlineKeyboard().text(
 					'🔁️ Refresh',

@@ -1,22 +1,23 @@
-import { type Bot, Keyboard } from 'grammy';
-import { env } from '$env/dynamic/private';
+import { type Bot, Context, Keyboard } from 'grammy';
+import { VERCEL_ENV } from '$env/static/private';
 import { redis } from '$lib/server/db/redis.ts';
 
-export const storageKey = `essencia:orga:botConfig:${env.VERCEL_ENV}`;
+export const storageKey = `essencia:${VERCEL_ENV}:orgaBotConfig`;
 
 export enum ChatType {
 	Home,
-	Legacy,
 	Channel,
 	CarSharing,
-	HomeOrganizationThread
+	HomeDailyInfoThread,
+	HomeWeekPlanningThread
 }
 
 export type BotConfig = {
 	[chatType in keyof typeof ChatType]: number;
 };
 
-const REPLY_ORGA_THREAD = 'Organization Thread ID:';
+const REPLY_DAILY_INFO_THREAD = 'Daily Info Thread ID:';
+const REPLY_WEEK_PLANNING_THREAD = 'Week Planning Thread ID:';
 
 export class BotGroups {
 	private botConfig?: BotConfig;
@@ -33,12 +34,6 @@ export class BotGroups {
 						})
 					)
 					.row(
-						Keyboard.requestChat('Essência Legacy Group', ChatType.Legacy, {
-							chat_is_forum: false,
-							chat_is_channel: false
-						})
-					)
-					.row(
 						Keyboard.requestChat('Essência Public Channel', ChatType.Channel, {
 							chat_is_channel: true
 						})
@@ -50,7 +45,8 @@ export class BotGroups {
 						})
 					);
 
-				await ctx.reply('Setup', {
+				await ctx.reply(`Setup for \`${VERCEL_ENV}\` environment`, {
+					parse_mode: 'MarkdownV2',
 					reply_markup: customKeyboard
 				});
 			} else {
@@ -60,8 +56,6 @@ export class BotGroups {
 
 		bot.on(':chat_shared', async (ctx) => {
 			if (ctx.message?.chat_shared) {
-				console.log(ctx.message.chat_shared);
-
 				const { chat_id, request_id } = ctx.message.chat_shared;
 				const hasBotConfig = await redis.exists(storageKey);
 
@@ -72,7 +66,7 @@ export class BotGroups {
 				}
 
 				if (request_id === ChatType.Home) {
-					await ctx.reply(REPLY_ORGA_THREAD, {
+					await ctx.reply(REPLY_DAILY_INFO_THREAD, {
 						reply_markup: { force_reply: true }
 					});
 				} else {
@@ -93,21 +87,20 @@ export class BotGroups {
 			}
 		});
 
-		bot.on('message:text', async (ctx) => {
-			if (!ctx.message.reply_to_message) return;
-
-			if (ctx.message.reply_to_message.text === REPLY_ORGA_THREAD) {
-				const threadId = Number(ctx.message.text);
-				if (Number.isNaN(threadId)) {
-					await ctx.reply('Not a valid thread id');
-				} else {
-					await redis.json.set(
-						storageKey,
-						`$.${ChatType[ChatType.HomeOrganizationThread]}`,
-						JSON.stringify(threadId)
-					);
+		bot.on('message:text', async (ctx, next) => {
+			switch (ctx.message.reply_to_message?.text) {
+				case REPLY_DAILY_INFO_THREAD:
+					await storeThreadIdFromReply(ctx, ChatType.HomeDailyInfoThread);
+					await ctx.reply(REPLY_WEEK_PLANNING_THREAD, {
+						reply_markup: { force_reply: true }
+					});
+					break;
+				case REPLY_WEEK_PLANNING_THREAD:
+					await storeThreadIdFromReply(ctx, ChatType.HomeWeekPlanningThread);
 					await ctx.reply(`Saved.`);
-				}
+					break;
+				default:
+					return next();
 			}
 		});
 	}
@@ -119,5 +112,15 @@ export class BotGroups {
 		}
 
 		return this.botConfig;
+	}
+}
+
+async function storeThreadIdFromReply(ctx: Context, target: ChatType) {
+	const threadId = Number(ctx.message!.text);
+
+	if (Number.isNaN(threadId)) {
+		throw new Error('Not a valid thread id');
+	} else {
+		await redis.json.set(storageKey, `$.${ChatType[target]}`, JSON.stringify(threadId));
 	}
 }

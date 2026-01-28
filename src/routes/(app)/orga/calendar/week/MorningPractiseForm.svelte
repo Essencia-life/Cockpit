@@ -18,7 +18,7 @@
 				new Date(event.start!.dateTime ?? '').toLocaleDateString('en') === dayStr
 		)
 	);
-	const data = $derived(JSON.parse(event?.extendedProperties!.private!.data ?? 'null'));
+	const eventProps = $derived(event?.extendedProperties?.private);
 </script>
 
 <form {...form.enhance(({ submit }) => submit())}>
@@ -26,19 +26,15 @@
 		class="input"
 		placeholder="Practise"
 		{...form.fields.practise.as('text')}
-		value={data?.practise}
+		value={eventProps?.practise}
 	/>
 	<TelegramUserSelect
 		placeholder="Facilitator"
-		field={form.fields.facilitator[0]}
-		value={data?.facilitator[0]}
-	/>
-	<TelegramUserSelect
-		placeholder="Co-Facilitator"
-		field={form.fields.facilitator[1]}
-		value={data?.facilitator[1]}
+		field={form.fields.facilitator}
+		value={eventProps?.facilitator}
 	/>
 	<input type="hidden" name="day" value={dayStr} />
+	<input type="hidden" name="eventId" value={event?.id ?? ''} />
 	<button class="btn w-full preset-filled">Save</button>
 </form>
 
