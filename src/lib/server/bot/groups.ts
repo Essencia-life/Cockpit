@@ -13,7 +13,7 @@ export enum ChatType {
 }
 
 export type BotConfig = {
-	[chatType in keyof typeof ChatType]: number;
+	[chatType in keyof typeof ChatType]: number | undefined;
 };
 
 const REPLY_DAILY_INFO_THREAD = 'Daily Info Thread ID:';
@@ -74,6 +74,8 @@ export class BotGroups {
 						reply_markup: { remove_keyboard: true }
 					});
 				}
+
+				delete this.botConfig;
 			}
 		});
 
@@ -90,13 +92,13 @@ export class BotGroups {
 		bot.on('message:text', async (ctx, next) => {
 			switch (ctx.message.reply_to_message?.text) {
 				case REPLY_DAILY_INFO_THREAD:
-					await storeThreadIdFromReply(ctx, ChatType.HomeDailyInfoThread);
+					await this.storeThreadIdFromReply(ctx, ChatType.HomeDailyInfoThread);
 					await ctx.reply(REPLY_WEEK_PLANNING_THREAD, {
 						reply_markup: { force_reply: true }
 					});
 					break;
 				case REPLY_WEEK_PLANNING_THREAD:
-					await storeThreadIdFromReply(ctx, ChatType.HomeWeekPlanningThread);
+					await this.storeThreadIdFromReply(ctx, ChatType.HomeWeekPlanningThread);
 					await ctx.reply(`Saved.`);
 					break;
 				default:
@@ -113,14 +115,15 @@ export class BotGroups {
 
 		return this.botConfig;
 	}
-}
 
-async function storeThreadIdFromReply(ctx: Context, target: ChatType) {
-	const threadId = Number(ctx.message!.text);
+	private async storeThreadIdFromReply(ctx: Context, target: ChatType) {
+		const threadId = Number(ctx.message!.text);
 
-	if (Number.isNaN(threadId)) {
-		throw new Error('Not a valid thread id');
-	} else {
-		await redis.json.set(storageKey, `$.${ChatType[target]}`, JSON.stringify(threadId));
+		if (Number.isNaN(threadId)) {
+			throw new Error('Not a valid thread id');
+		} else {
+			await redis.json.set(storageKey, `$.${ChatType[target]}`, JSON.stringify(threadId));
+			delete this.botConfig;
+		}
 	}
 }
