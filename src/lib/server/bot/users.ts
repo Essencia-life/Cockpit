@@ -10,9 +10,11 @@ export class UsersBot {
 			console.log(ctx.chatMember);
 
 			if (ctx.chatMember.chat.id === groups?.Home) {
-				if (ctx.chatMember.new_chat_member && !ctx.chatMember.new_chat_member.user.is_bot) {
+				const member = ctx.chatMember.new_chat_member;
+
+				if (member.status === 'member' && !member.user.is_bot) {
 					await users.addUser(ctx.chatMember.new_chat_member.user);
-				} else if (ctx.chatMember.old_chat_member) {
+				} else if (member.status === 'left' || member.status === 'kicked') {
 					await users.removeUser(ctx.chatMember.old_chat_member.user);
 				}
 			}
