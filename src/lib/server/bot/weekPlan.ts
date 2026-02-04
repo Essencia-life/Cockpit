@@ -175,15 +175,19 @@ export class WeekPlanBot {
 		const dateStr = date.toISOString().substring(0, 10);
 		const { lunchProps, practiseProps } = await getDayPlanProps(date, event);
 
-		await this.bot.api.editMessageText(
-			groups.Home,
-			messageId,
-			formatDayPlan(date, lunchProps, practiseProps),
-			{
-				parse_mode: 'HTML',
-				reply_markup: buildDayPlanKeyboard(dateStr, messageId, lunchProps, practiseProps)
-			}
-		);
+		try {
+			await this.bot.api.editMessageText(
+				groups.Home,
+				messageId,
+				formatDayPlan(date, lunchProps, practiseProps),
+				{
+					parse_mode: 'HTML',
+					reply_markup: buildDayPlanKeyboard(dateStr, messageId, lunchProps, practiseProps)
+				}
+			);
+		} catch (err) {
+			console.warn(err);
+		}
 	}
 
 	private async getGroups() {
@@ -256,9 +260,9 @@ function buildDayPlanKeyboard(
 			facilitator
 				? InlineKeyboard.text('✅ Morning Practise', key('facilitator'))
 				: InlineKeyboard.url(
-						'Morning Practise',
-						`https://t.me/EssenciaOrgaBot?start=practise_${dateStr}_${messageId}`
-					)
+					'Morning Practise',
+					`https://t.me/EssenciaOrgaBot?start=practise_${dateStr}_${messageId}`
+				)
 		)
 		.row(InlineKeyboard.text(check(chef) + 'Lunch Chef', key('chef')))
 		.row(InlineKeyboard.text(check(chef2) + 'Lunch Co-Chef', key('chef2')))
