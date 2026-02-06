@@ -37,7 +37,13 @@ export class AgendaBot {
 			const message = await this.bot.api.sendMessage(
 				groups.Home,
 				formatAgenda(tomorrow, tomorrowEvents),
-				{ parse_mode: 'HTML', message_thread_id: groups.HomeDailyInfoThread }
+				{
+					parse_mode: 'HTML',
+					message_thread_id: groups.HomeDailyInfoThread,
+					link_preview_options: {
+						is_disabled: true
+					}
+				}
 			);
 
 			await this.bot.api.editMessageReplyMarkup(groups.Home, message.message_id, {
@@ -65,7 +71,10 @@ export class AgendaBot {
 				reply_markup: new InlineKeyboard().text(
 					'🔁️ Refresh',
 					`agenda:${date.toISOString().substring(0, 10)}:${messageId}`
-				)
+				),
+				link_preview_options: {
+					is_disabled: true
+				}
 			});
 		} catch (err) {
 			console.error(err);
