@@ -19,6 +19,8 @@ declare global {
 		CMS: CMS;
 		CMS_MANUAL_INIT: boolean;
 	}
+
+	type MakeRequired<T, K extends keyof T> = Omit<Partial<T>, K> & Required<Pick<T, K>>;
 }
 
 export {};

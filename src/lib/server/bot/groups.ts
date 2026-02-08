@@ -13,7 +13,7 @@ export enum ChatType {
 }
 
 export type BotConfig = {
-	[chatType in keyof typeof ChatType]: number | undefined;
+	[chatType in keyof typeof ChatType]: number;
 };
 
 const REPLY_DAILY_INFO_THREAD = 'Daily Info Thread ID:';

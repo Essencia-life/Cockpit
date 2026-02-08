@@ -1,7 +1,7 @@
 import { COMMUNITY_ICAL, EVENTS_ICAL } from '$env/static/private';
 import ical, { type VEvent } from 'node-ical';
 import { type Bot, InlineKeyboard } from 'grammy';
-import type { BotGroups } from '$lib/server/bot/groups.ts';
+import type { BotConfig, BotGroups } from '$lib/server/bot/groups.ts';
 
 export class AgendaBot {
 	constructor(
@@ -81,10 +81,10 @@ export class AgendaBot {
 		}
 	}
 
-	private async getGroups() {
+	private async getGroups(): Promise<MakeRequired<BotConfig, 'Home' | 'HomeDailyInfoThread'>> {
 		const groups = await this.botGroups.getGroups();
 
-		if (!groups || !groups.Home) {
+		if (!groups || !groups.Home || !groups.HomeDailyInfoThread) {
 			throw new Error('Missing configuration');
 		}
 

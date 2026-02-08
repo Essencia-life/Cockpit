@@ -1,5 +1,5 @@
 import { type Bot, InlineKeyboard } from 'grammy';
-import type { BotGroups } from '$lib/server/bot/groups.ts';
+import { type BotConfig, type BotGroups } from '$lib/server/bot/groups.ts';
 import calendar, { type CalendarEvent } from '$lib/server/calendar';
 import weekPlan, {
 	formatLunch,
@@ -137,8 +137,10 @@ export class WeekPlanBot {
 		const weekDutyStart = new Date(
 			today.getFullYear(),
 			today.getMonth(),
-			today.getDate() - today.getDay() + 8
+			today.getDate() - today.getDay() + 1
 		);
+
+		console.info('Sending week plan starting from', weekDutyStart);
 
 		for (let i = 0; i < 5; i++) {
 			const date = new Date(
@@ -190,10 +192,10 @@ export class WeekPlanBot {
 		}
 	}
 
-	private async getGroups() {
+	private async getGroups(): Promise<MakeRequired<BotConfig, 'Home' | 'HomeWeekPlanningThread'>> {
 		const groups = await this.botGroups.getGroups();
 
-		if (!groups || !groups.Home) {
+		if (!groups || !groups.Home || !groups.HomeWeekPlanningThread) {
 			throw new Error('Missing configuration');
 		}
 
@@ -260,9 +262,9 @@ function buildDayPlanKeyboard(
 			facilitator
 				? InlineKeyboard.text('✅ Morning Practise', key('facilitator'))
 				: InlineKeyboard.url(
-					'Morning Practise',
-					`https://t.me/EssenciaOrgaBot?start=practise_${dateStr}_${messageId}`
-				)
+						'Morning Practise',
+						`https://t.me/EssenciaOrgaBot?start=practise_${dateStr}_${messageId}`
+					)
 		)
 		.row(InlineKeyboard.text(check(chef) + 'Lunch Chef', key('chef')))
 		.row(InlineKeyboard.text(check(chef2) + 'Lunch Co-Chef', key('chef2')))
