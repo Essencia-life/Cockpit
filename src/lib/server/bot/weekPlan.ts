@@ -142,6 +142,7 @@ export class WeekPlanBot {
 
 		console.info('Sending week plan starting from', weekDutyStart);
 
+		let firstMessage;
 		for (let i = 0; i < 5; i++) {
 			const date = new Date(
 				weekDutyStart.getFullYear(),
@@ -158,13 +159,20 @@ export class WeekPlanBot {
 			await this.bot.api.editMessageReplyMarkup(groups.Home, message.message_id, {
 				reply_markup: buildDayPlanKeyboard(dateStr, message.message_id)
 			});
+
+			if (i === 0) {
+				firstMessage = message;
+			}
 		}
 
 		await this.bot.api.sendMessage(
 			groups.Home,
-			'✍️ Please sign up for the upcoming duties before the Monday morning planning meeting by tapping one of the buttons.',
+			'✍️ Please sign up for the upcoming week before the Monday morning planning meeting by tapping one of the buttons.',
 			{
-				message_thread_id: groups.HomeWeekPlanningThread
+				message_thread_id: groups.HomeWeekPlanningThread,
+				reply_parameters: {
+					message_id: firstMessage?.message_id
+				}
 			}
 		);
 	}
