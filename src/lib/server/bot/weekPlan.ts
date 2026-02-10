@@ -47,7 +47,7 @@ export class WeekPlanBot {
 							await this.updateWeekPlanDay(messageId, event);
 							return ctx.answerCallbackQuery({
 								show_alert: true,
-								text: `This duty is already taken by ${previousValue.first_name}. If you want to takeover please ask them to remove themself by tapping this button again.`
+								text: `This job is already taken by ${previousValue.first_name}. If you want to takeover please ask them to remove themself by tapping this button again.`
 							});
 						} else {
 							console.info(`Remove ${previousValue.first_name} from ${task}`);
@@ -90,6 +90,18 @@ export class WeekPlanBot {
 				console.info('Save facilitator', { messageId, date, user });
 
 				let [event] = await weekPlan.getDay('morning-practise', date);
+
+				const previousValue = parseTelegramUser(event?.extendedProperties?.private?.facilitator);
+				if (previousValue && previousValue.id !== user.id) {
+					console.info(
+						`Can not sign ${user.first_name} as facilitator is already taken by ${previousValue.first_name}`
+					);
+
+					await this.updateWeekPlanDay(messageId, event);
+					return ctx.reply(
+						`This job is already taken by ${previousValue.first_name}. If you want to takeover please ask them to remove themself by tapping the button again.`
+					);
+				}
 
 				if (event) {
 					event = await weekPlan.updateDuty(event, {
@@ -239,7 +251,7 @@ function formatDayPlan(
 	lunchProps?: EventPrivatePropsLunch,
 	practiseProps?: EventPrivatePropsPractise
 ) {
-	return `<b>${date.toLocaleDateString('en', { weekday: 'long' })} / ${date.toLocaleDateString('pt', { weekday: 'long', day: 'numeric', month: 'numeric' })}</b>
+	return `<b>${date.toLocaleDateString('en', { weekday: 'long' })}</b> / ${date.toLocaleDateString('pt', { weekday: 'long', day: 'numeric', month: 'numeric' })}
 
 <u>Morning Practise</u>
 🤸 ${formatMorningPractise(practiseProps)}
