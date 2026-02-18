@@ -11,10 +11,12 @@ export type CalendarEvent = calendar_v3.Schema$Event;
 
 const calendar = google.calendar({ version: 'v3', auth });
 
-class Calendar {
+export class Calendar {
+	constructor(private readonly calendarId: string) {}
+
 	async getEvents(filter: string[], start?: Date, end?: Date): Promise<CalendarEvent[]> {
 		const res = await calendar.events.list({
-			calendarId: COMMUNITY_CALENDAR_ID,
+			calendarId: this.calendarId,
 			singleEvents: true,
 			orderBy: 'startTime',
 			timeMin: start?.toISOString(),
@@ -27,7 +29,7 @@ class Calendar {
 
 	async getEvent(eventId: string) {
 		const res = await calendar.events.get({
-			calendarId: COMMUNITY_CALENDAR_ID,
+			calendarId: this.calendarId,
 			eventId
 		});
 
@@ -36,18 +38,18 @@ class Calendar {
 
 	async insertEvent(requestBody: CalendarEvent) {
 		return calendar.events.insert({
-			calendarId: COMMUNITY_CALENDAR_ID,
+			calendarId: this.calendarId,
 			requestBody
 		});
 	}
 
 	async updateEvent(eventId: string, requestBody: CalendarEvent) {
 		return calendar.events.patch({
-			calendarId: COMMUNITY_CALENDAR_ID,
+			calendarId: this.calendarId,
 			eventId,
 			requestBody
 		});
 	}
 }
 
-export default new Calendar();
+export default new Calendar(COMMUNITY_CALENDAR_ID);

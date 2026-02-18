@@ -1,7 +1,10 @@
-import { COMMUNITY_ICAL, EVENTS_ICAL } from '$env/static/private';
-import ical, { type VEvent } from 'node-ical';
+import { COMMUNITY_CALENDAR_ID, EVENTS_CALENDAR_ID } from '$env/static/private';
 import { type Bot, InlineKeyboard } from 'grammy';
 import type { BotConfig, BotGroups } from '$lib/server/bot/groups.ts';
+import { Calendar, type CalendarEvent } from '$lib/server/calendar.ts';
+
+const eventsCalendar = new Calendar(EVENTS_CALENDAR_ID);
+const communityCalendar = new Calendar(COMMUNITY_CALENDAR_ID);
 
 export class AgendaBot {
 	constructor(
@@ -95,35 +98,10 @@ export class AgendaBot {
 		const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 		const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
 
-		const events = await ical.async.fromURL(EVENTS_ICAL);
-		const communityEvents = await ical.async.fromURL(COMMUNITY_ICAL);
+		const events = await eventsCalendar.getEvents([], startOfDay, endOfDay);
+		const communityEvents = await communityCalendar.getEvents([], startOfDay, endOfDay);
 
-		return Object.values(communityEvents)
-			.concat(Object.values(events))
-			.reduce((events, entry) => {
-				if (entry.type === 'VEVENT') {
-					if (entry.start.toDateString() === date.toDateString()) {
-						events.push(entry);
-					} else if (entry.rrule?.between(new Date(startOfDay), new Date(endOfDay)).length) {
-						const { tz } = entry.start;
-
-						const start = Object.assign(new Date(startOfDay), { tz });
-						start.setHours(entry.start.getHours(), entry.start.getMinutes());
-
-						const end = Object.assign(new Date(startOfDay), { tz });
-						end.setHours(entry.end.getHours(), entry.end.getMinutes());
-
-						events.push({
-							...entry,
-							start,
-							end
-						});
-					}
-				}
-
-				return events;
-			}, new Array<VEvent>())
-			.sort(byStartDate);
+		return communityEvents.concat(events).sort(byStartDate);
 	}
 }
 
@@ -134,12 +112,12 @@ function transformDescription(description: string): string {
 		.replaceAll('<ul>', '');
 }
 
-function formatLocation(location: string) {
+function formatLocation(location?: string | null) {
 	return location ? `<i>\uFE6B${location.replace(/^(\w+)-\d+-\1 \(\d+\)$/, '$1')}</i>` : '';
 }
 
-function formatDuration(event: VEvent) {
-	const ms = Math.abs(event.end.getTime() - event.start.getTime());
+function formatDuration(event: CalendarEvent) {
+	const ms = Math.abs(Date.parse(event.end!.dateTime!) - Date.parse(event.start!.dateTime!));
 
 	const s = Math.floor(ms / 1000);
 	const m = Math.floor(s / 60);
@@ -162,8 +140,8 @@ function formatDuration(event: VEvent) {
 	return '';
 }
 
-function formatEvent(event: VEvent): string {
-	const time = event.start.toLocaleTimeString('en', {
+function formatEvent(event: CalendarEvent): string {
+	const time = new Date(event.start!.dateTime!).toLocaleTimeString('en', {
 		hour12: false,
 		hour: '2-digit',
 		minute: '2-digit'
@@ -173,11 +151,11 @@ ${formatLocation(event.location)}
 ${transformDescription(event.description ?? '…')}</blockquote>`;
 }
 
-function byStartDate(a: VEvent, b: VEvent) {
-	return a.start.getTime() - b.start.getTime();
+function byStartDate(a: CalendarEvent, b: CalendarEvent) {
+	return Date.parse(a.start!.dateTime!) - Date.parse(b.start!.dateTime!);
 }
 
-function formatAgenda(date: Date, events: VEvent[]) {
+function formatAgenda(date: Date, events: CalendarEvent[]) {
 	return `🗓️ <b>Agenda for ${date.toLocaleDateString('en', { weekday: 'long' })}</b>
 
 ${events.map(formatEvent).join('\n\n')}`;
