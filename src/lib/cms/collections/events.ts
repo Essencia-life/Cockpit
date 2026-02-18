@@ -21,7 +21,11 @@ export default {
 					options: ['event', 'retreat']
 				},
 				{ name: 'cover_image', label: 'Cover Image', widget: 'file', choose_url: false },
-				{ name: 'short_description', label: 'Short Description' },
+				{
+					name: 'short_description',
+					label: 'Short Description',
+					pattern: ['^.{0,300}$', 'Maximum 300 characters']
+				},
 				{
 					name: 'description',
 					label: 'Description',
