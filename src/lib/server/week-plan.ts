@@ -170,9 +170,12 @@ export function formatMorningPractise(props?: EventPrivatePropsPractise) {
 		const facilitator = parseTelegramUser(props.facilitator);
 
 		if (facilitator) {
-			return props.practise
-				? `${props.practise} with ${formatTelegramUser(facilitator)}`
-				: formatTelegramUser(facilitator);
+			if (props.practise) {
+				const [title, description] = props.practise.split('\n', 2);
+				return `${title} with ${formatTelegramUser(facilitator)}\n${description ?? ''}`;
+			} else {
+				return formatTelegramUser(facilitator);
+			}
 		}
 	}
 

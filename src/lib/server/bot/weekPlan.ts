@@ -19,7 +19,8 @@ export class WeekPlanBot {
 		private readonly bot: Bot,
 		private readonly botGroups: BotGroups
 	) {
-		const morningPractiseReply = 'Please let me know what morning practise you want to offer.';
+		const morningPractiseReply =
+			'Please let me know what morning practise you want to offer. First line title and second optional details.';
 
 		bot.callbackQuery(
 			/^plan:(?<date>\d{4}-\d{2}-\d{2}):(?<messageId>\d+):(?<task>\w+)$/,
