@@ -3,6 +3,7 @@ import type { CmsCollectionFile } from 'decap-cms-core';
 export default {
 	name: 'events',
 	label: '🗓️ Events',
+	label_singular: 'Event',
 	file: 'src/lib/content/events.json',
 	media_folder: '/src/lib/assets/media/events',
 	public_folder: 'media/events',
