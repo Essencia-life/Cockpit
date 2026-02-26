@@ -16,13 +16,23 @@ export interface EventPrivatePropsPractise {
 	facilitator: string; // JSON string of TelegramUser
 }
 
-export type EventPrivateProps = EventPrivatePropsLunch | EventPrivatePropsPractise;
+export interface EventPrivatePropsMeditation {
+	source: 'week-plan';
+	type: 'meditation';
+	guide: string; // JSON string of TelegramUser
+}
+
+export type EventPrivateProps =
+	| EventPrivatePropsLunch
+	| EventPrivatePropsPractise
+	| EventPrivatePropsMeditation;
 
 export type WeekPlanType = EventPrivateProps['type'];
-export type WeekPlanDuty = 'chef' | 'chef2' | 'cleaner' | 'facilitator';
+export type WeekPlanDuty = 'chef' | 'chef2' | 'cleaner' | 'facilitator' | 'guide';
 
 export type WeekPlanLunchProps = Partial<Omit<EventPrivatePropsLunch, 'source' | 'type'>>;
 export type WeekPlanPractiseProps = Partial<Omit<EventPrivatePropsPractise, 'source' | 'type'>>;
+export type WeekPlanMeditationProps = Partial<Omit<EventPrivatePropsMeditation, 'source' | 'type'>>;
 
 const isDefined = <T>(s: T | undefined | null): s is T => s !== undefined && s !== null;
 
@@ -33,6 +43,38 @@ class WeekPlan {
 			date,
 			new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1)
 		);
+	}
+
+	async insetMeditation(date: Date, props: WeekPlanMeditationProps): Promise<CalendarEvent> {
+		const newEvent: CalendarEvent = {
+			summary: '🧘️ Meditation',
+			visibility: 'private',
+			location: 'Shala',
+			start: {
+				dateTime: new Date(date.getFullYear(), date.getMonth(), date.getDate(), 7).toISOString(),
+				timeZone: 'Europe/Lisbon'
+			},
+			end: {
+				dateTime: new Date(date.getFullYear(), date.getMonth(), date.getDate(), 8).toISOString(),
+				timeZone: 'Europe/Lisbon'
+			},
+			extendedProperties: {
+				private: {
+					source: 'week-plan',
+					type: 'meditation',
+					...props
+				}
+			}
+		};
+
+		const response = await calendar.insertEvent({
+			...newEvent,
+			description: formatEventDescription(
+				newEvent.extendedProperties!.private! as unknown as EventPrivateProps
+			)
+		});
+
+		return response.data;
 	}
 
 	async insetLunch(date: Date, props: WeekPlanLunchProps): Promise<CalendarEvent> {
@@ -162,7 +204,21 @@ Please write your name into the lunch book and make your contribution at the end
 		)}.`;
 	} else if (props.type === 'morning-practise') {
 		return formatMorningPractise(props);
+	} else if (props.type === 'meditation') {
+		return formatMeditation(props);
 	}
+}
+
+export function formatMeditation(props?: EventPrivatePropsMeditation) {
+	if (props) {
+		const guide = parseTelegramUser(props.guide);
+
+		if (guide) {
+			return `Guided meditation with ${formatTelegramUser(guide)}`;
+		}
+	}
+
+	return 'Silent meditation';
 }
 
 export function formatMorningPractise(props?: EventPrivatePropsPractise) {
@@ -172,7 +228,7 @@ export function formatMorningPractise(props?: EventPrivatePropsPractise) {
 		if (facilitator) {
 			if (props.practise) {
 				const [title, description] = props.practise.split('\n', 2);
-				return `${title} with ${formatTelegramUser(facilitator)}\n${description ?? ''}`;
+				return `${title} with ${formatTelegramUser(facilitator)}${description ? '\n' + description : ''}`;
 			} else {
 				return formatTelegramUser(facilitator);
 			}

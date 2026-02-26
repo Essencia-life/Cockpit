@@ -10,7 +10,9 @@ import weekPlan, {
 	type EventPrivatePropsLunch,
 	type EventPrivatePropsPractise,
 	type WeekPlanDuty,
-	type WeekPlanType
+	type WeekPlanType,
+	type EventPrivatePropsMeditation,
+	formatMeditation
 } from '../week-plan';
 import type { TelegramUser } from '$lib/server/users.ts';
 
@@ -34,7 +36,7 @@ export class WeekPlanBot {
 					console.info('Received week-plan callbackQuery', { messageId, date, task, user });
 
 					let [event] = await weekPlan.getDay(
-						task === 'facilitator' ? 'morning-practise' : 'lunch',
+						task === 'guide' ? 'meditation' : task === 'facilitator' ? 'morning-practise' : 'lunch',
 						date
 					);
 					const previousValue = parseTelegramUser(event?.extendedProperties?.private?.[task]);
@@ -64,6 +66,12 @@ export class WeekPlanBot {
 						console.info('Update existing event');
 
 						event = await weekPlan.updateDuty(event, {
+							[task]: JSON.stringify(user)
+						});
+					} else if (task === 'guide') {
+						console.info('Create new event');
+
+						event = await weekPlan.insetMeditation(date, {
 							[task]: JSON.stringify(user)
 						});
 					} else {
@@ -167,10 +175,9 @@ export class WeekPlanBot {
 				message_thread_id: groups.HomeWeekPlanningThread,
 				parse_mode: 'HTML'
 			});
-			const dateStr = date.toISOString().substring(0, 10);
 
 			await this.bot.api.editMessageReplyMarkup(groups.Home, message.message_id, {
-				reply_markup: buildDayPlanKeyboard(dateStr, message.message_id)
+				reply_markup: buildDayPlanKeyboard(date, message.message_id)
 			});
 
 			if (i === 0) {
@@ -183,8 +190,8 @@ export class WeekPlanBot {
 			'✍️ Please sign up for the upcoming week before the Monday morning planning meeting by tapping one of the buttons.',
 			{
 				message_thread_id: groups.HomeWeekPlanningThread,
-				reply_parameters: {
-					message_id: firstMessage?.message_id
+				reply_parameters: firstMessage && {
+					message_id: firstMessage.message_id
 				}
 			}
 		);
@@ -195,17 +202,22 @@ export class WeekPlanBot {
 		const date = new Date(event.start!.dateTime!);
 		date.setHours(0, 0, 0, 0);
 
-		const dateStr = date.toISOString().substring(0, 10);
-		const { lunchProps, practiseProps } = await getDayPlanProps(date, event);
+		const { lunchProps, practiseProps, meditationProps } = await getDayPlanProps(date, event);
 
 		try {
 			await this.bot.api.editMessageText(
 				groups.Home,
 				messageId,
-				formatDayPlan(date, lunchProps, practiseProps),
+				formatDayPlan(date, lunchProps, practiseProps, meditationProps),
 				{
 					parse_mode: 'HTML',
-					reply_markup: buildDayPlanKeyboard(dateStr, messageId, lunchProps, practiseProps)
+					reply_markup: buildDayPlanKeyboard(
+						date,
+						messageId,
+						lunchProps,
+						practiseProps,
+						meditationProps
+					)
 				}
 			);
 		} catch (err) {
@@ -232,6 +244,7 @@ async function fetchEventProps<T extends EventPrivateProps>(type: WeekPlanType, 
 async function getDayPlanProps(date: Date, event?: CalendarEvent) {
 	let lunchProps: EventPrivatePropsLunch | undefined;
 	let practiseProps: EventPrivatePropsPractise | undefined;
+	let meditationProps: EventPrivatePropsMeditation | undefined;
 
 	const privateProps = event?.extendedProperties?.private as EventPrivateProps | undefined;
 
@@ -239,37 +252,52 @@ async function getDayPlanProps(date: Date, event?: CalendarEvent) {
 		lunchProps = privateProps;
 	} else if (privateProps?.type === 'morning-practise') {
 		practiseProps = privateProps;
+	} else if (privateProps?.type === 'meditation') {
+		meditationProps = privateProps;
 	}
 
 	lunchProps ||= await fetchEventProps('lunch', date);
 	practiseProps ||= await fetchEventProps('morning-practise', date);
+	meditationProps ||= await fetchEventProps('meditation', date);
 
-	return { lunchProps, practiseProps };
+	return { lunchProps, practiseProps, meditationProps };
 }
 
 function formatDayPlan(
 	date: Date,
 	lunchProps?: EventPrivatePropsLunch,
-	practiseProps?: EventPrivatePropsPractise
+	practiseProps?: EventPrivatePropsPractise,
+	meditationProps?: EventPrivatePropsMeditation
 ) {
-	return `<b>${date.toLocaleDateString('en', { weekday: 'long' })}</b> / ${date.toLocaleDateString('pt', { weekday: 'long', day: 'numeric', month: 'numeric' })}
+	const plan = [
+		`<b>${date.toLocaleDateString('en', { weekday: 'long' })}</b> / ${date.toLocaleDateString('pt', { weekday: 'long', day: 'numeric', month: 'numeric' })}`
+	];
 
-<u>Morning Practise</u>
-🤸 ${formatMorningPractise(practiseProps)}
+	if (date.getDay() === 2 || date.getDay() === 4) {
+		plan.push(`<u>Morning Meditation</u>
+🧘️ ${formatMeditation(meditationProps)}`);
+	}
 
-<u>Lunch</u>
-🧑‍🍳 ${formatLunch(lunchProps)}
+	plan.push(`<u>Morning Practise</u>
+🤸 ${formatMorningPractise(practiseProps)}`);
 
-<u>Lunch Cleaning</u>
-🧽 ${formatLunchCleaning(lunchProps)}`;
+	plan.push(`<u>Lunch</u>
+🧑‍🍳 ${formatLunch(lunchProps)}`);
+
+	plan.push(`<u>Lunch Cleaning</u>
+🧽 ${formatLunchCleaning(lunchProps)}`);
+
+	return plan.join('\n\n');
 }
 
 function buildDayPlanKeyboard(
-	dateStr: string,
+	date: Date,
 	messageId: number,
 	lunchProps?: EventPrivatePropsLunch,
-	practiseProps?: EventPrivatePropsPractise
+	practiseProps?: EventPrivatePropsPractise,
+	meditationProps?: EventPrivatePropsMeditation
 ) {
+	const dateStr = date.toISOString().substring(0, 10);
 	const key = (task: string) => `plan:${dateStr}:${messageId}:${task}`;
 	const check = (user?: TelegramUser) => (user ? '✅ ' : '');
 
@@ -277,8 +305,15 @@ function buildDayPlanKeyboard(
 	const chef2 = lunchProps && parseTelegramUser(lunchProps.chef2);
 	const cleaner = lunchProps && parseTelegramUser(lunchProps.cleaner);
 	const facilitator = practiseProps && parseTelegramUser(practiseProps.facilitator);
+	const guide = meditationProps && parseTelegramUser(meditationProps.guide);
 
-	return new InlineKeyboard()
+	let keyboard = new InlineKeyboard();
+
+	if (date.getDay() === 2 || date.getDay() === 4) {
+		keyboard = keyboard.row(InlineKeyboard.text(check(guide) + 'Meditation Guide', key('guide')));
+	}
+
+	keyboard = keyboard
 		.row(
 			facilitator
 				? InlineKeyboard.text('✅ Morning Practise', key('facilitator'))
@@ -290,4 +325,6 @@ function buildDayPlanKeyboard(
 		.row(InlineKeyboard.text(check(chef) + 'Lunch Chef', key('chef')))
 		.row(InlineKeyboard.text(check(chef2) + 'Lunch Co-Chef', key('chef2')))
 		.row(InlineKeyboard.text(check(cleaner) + 'Lunch Cleaning', key('cleaner')));
+
+	return keyboard;
 }
