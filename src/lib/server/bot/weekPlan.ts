@@ -299,7 +299,7 @@ function buildDayPlanKeyboard(
 ) {
 	const dateStr = date.toISOString().substring(0, 10);
 	const key = (task: string) => `plan:${dateStr}:${messageId}:${task}`;
-	const check = (user?: TelegramUser) => (user ? '✅ ' : '');
+	const check = (user?: TelegramUser) => (user ? '✅ ' : '🅾️');
 
 	const chef = lunchProps && parseTelegramUser(lunchProps.chef);
 	const chef2 = lunchProps && parseTelegramUser(lunchProps.chef2);
@@ -310,7 +310,7 @@ function buildDayPlanKeyboard(
 	let keyboard = new InlineKeyboard();
 
 	if (date.getDay() === 2 || date.getDay() === 4) {
-		keyboard = keyboard.row(InlineKeyboard.text(check(guide) + 'Meditation Guide', key('guide')));
+		keyboard = keyboard.text(check(guide) + 'Meditation Guide', key('guide')).row();
 	}
 
 	keyboard = keyboard
@@ -318,13 +318,14 @@ function buildDayPlanKeyboard(
 			facilitator
 				? InlineKeyboard.text('✅ Morning Practise', key('facilitator'))
 				: InlineKeyboard.url(
-						'Morning Practise',
+						'🅾️ Morning Practise',
 						`https://t.me/EssenciaOrgaBot?start=practise_${dateStr}_${messageId}`
 					)
 		)
-		.row(InlineKeyboard.text(check(chef) + 'Lunch Chef', key('chef')))
-		.row(InlineKeyboard.text(check(chef2) + 'Lunch Co-Chef', key('chef2')))
-		.row(InlineKeyboard.text(check(cleaner) + 'Lunch Cleaning', key('cleaner')));
+		.text(check(chef) + 'Lunch Chef', key('chef'))
+		.text(check(chef2) + 'Lunch Chef', key('chef2'))
+		.row()
+		.text(check(cleaner) + 'Lunch Cleaning', key('cleaner'));
 
 	return keyboard;
 }
