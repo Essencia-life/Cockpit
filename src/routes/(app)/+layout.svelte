@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { Navigation } from '@skeletonlabs/skeleton-svelte';
-	import { Moon, Globe, ClipboardList, CalendarRange } from '@lucide/svelte';
+	import { Moon, Globe, Send, ClipboardList, CalendarRange } from '@lucide/svelte';
 
 	let { children } = $props();
 </script>
@@ -60,6 +60,24 @@
 					>
 						<Globe class="size-4" />
 						<span>Website CMS</span>
+					</a>
+				</Navigation.Menu>
+			</Navigation.Group>
+			<Navigation.Group>
+				<Navigation.Label class="pl-2 capitalize">Events</Navigation.Label>
+				<Navigation.Menu>
+					<a href={resolve('/events')} class="btn w-full justify-start px-2 hover:preset-tonal">
+						<ClipboardList class="size-4" />
+						<span>Roles & Tasks</span>
+					</a>
+				</Navigation.Menu>
+				<Navigation.Menu>
+					<a
+						href={resolve('/events/publish')}
+						class="btn w-full justify-start px-2 hover:preset-tonal"
+					>
+						<Send class="size-4" />
+						<span>Publish Event</span>
 					</a>
 				</Navigation.Menu>
 			</Navigation.Group>
