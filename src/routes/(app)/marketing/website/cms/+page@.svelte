@@ -12,6 +12,7 @@
 	import events from '$lib/cms/collections/events.js';
 	import accommodations from '$lib/cms/collections/accommodations.js';
 	import eventCalendar from '$lib/cms/editor-components/event-calendar.js';
+	import imageAndContent from '$lib/cms/editor-components/image-and-content.js';
 
 	function ready() {
 		window.CMS.init({
@@ -58,6 +59,7 @@
 		});
 
 		window.CMS.registerEditorComponent(eventCalendar);
+		window.CMS.registerEditorComponent(imageAndContent);
 	}
 </script>
 
