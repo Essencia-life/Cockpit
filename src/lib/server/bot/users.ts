@@ -18,6 +18,15 @@ export class UsersBot {
 					await users.removeUser(ctx.chatMember.old_chat_member.user);
 				}
 			}
+
+			if (ctx.chatMember.chat.id === groups?.CarSharing) {
+				try {
+					console.log('Delete chat member message of car sharing group');
+					await ctx.deleteMessage();
+				} catch (err) {
+					console.log(err);
+				}
+			}
 		});
 	}
 }
