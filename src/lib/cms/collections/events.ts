@@ -3,7 +3,6 @@ import type { CmsCollectionFile } from 'decap-cms-core';
 export default {
 	name: 'events',
 	label: '🗓️ Events',
-	label_singular: 'Event',
 	file: 'src/lib/content/events.json',
 	media_folder: '/src/lib/assets/media/events',
 	public_folder: 'media/events',
@@ -11,6 +10,7 @@ export default {
 		{
 			name: 'events',
 			label: 'Events',
+			label_singular: 'Event',
 			widget: 'list',
 			fields: [
 				{ name: 'slug', label: 'Slug' },
@@ -21,6 +21,8 @@ export default {
 					widget: 'select',
 					options: ['event', 'retreat']
 				},
+				{ name: 'start', label: 'Start Date & Time', widget: 'datetime' },
+				{ name: 'end', label: 'End Date & Time', widget: 'datetime' },
 				{ name: 'cover_image', label: 'Cover Image', widget: 'file', choose_url: false },
 				{
 					name: 'short_description',
@@ -33,9 +35,7 @@ export default {
 					widget: 'markdown',
 					buttons: ['bold', 'italic', 'quote', 'link', 'bulleted-list', 'numbered-list'],
 					editor_components: []
-				},
-				{ name: 'start', label: 'Start Date & Time', widget: 'datetime' },
-				{ name: 'end', label: 'End Date & Time', widget: 'datetime' }
+				}
 			]
 		}
 	]
