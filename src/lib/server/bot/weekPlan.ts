@@ -299,7 +299,7 @@ function buildDayPlanKeyboard(
 ) {
 	const dateStr = date.toISOString().substring(0, 10);
 	const key = (task: string) => `plan:${dateStr}:${messageId}:${task}`;
-	const check = (user?: TelegramUser) => (user ? '✅ ' : '🅾️');
+	const check = (user?: TelegramUser) => (user ? '✅ ' : '⭕️ ');
 
 	const chef = lunchProps && parseTelegramUser(lunchProps.chef);
 	const chef2 = lunchProps && parseTelegramUser(lunchProps.chef2);
@@ -314,14 +314,15 @@ function buildDayPlanKeyboard(
 	}
 
 	keyboard = keyboard
-		.row(
+		.add(
 			facilitator
 				? InlineKeyboard.text('✅ Morning Practise', key('facilitator'))
 				: InlineKeyboard.url(
-						'🅾️ Morning Practise',
+						'⭕️ Morning Practise',
 						`https://t.me/EssenciaOrgaBot?start=practise_${dateStr}_${messageId}`
 					)
 		)
+		.row()
 		.text(check(chef) + 'Lunch Chef', key('chef'))
 		.text(check(chef2) + 'Lunch Chef', key('chef2'))
 		.row()
