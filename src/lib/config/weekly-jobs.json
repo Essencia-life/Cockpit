@@ -1,0 +1,125 @@
+{
+  "config": [
+    {
+      "type": "daily",
+      "calendar": "community",
+      "name": "meditation",
+      "title": "Guided meditation",
+      "description": "",
+      "startHour": 7,
+      "endHour": 8,
+      "days": [
+        2,
+        4
+      ],
+      "jobs": [
+        {
+          "name": "guide",
+          "title": "Meditation Guide",
+          "persons": 1,
+          "askDetails": true
+        }
+      ]
+    },
+    {
+      "type": "daily",
+      "calendar": "community",
+      "name": "practice",
+      "title": "Morning Practice",
+      "description": "",
+      "startHour": 8,
+      "endHour": 9,
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "jobs": [
+        {
+          "name": "facilitator",
+          "title": "Morning Practice",
+          "persons": 1,
+          "askDetails": true
+        }
+      ]
+    },
+    {
+      "type": "daily",
+      "calendar": "community",
+      "name": "lunch",
+      "title": "Lunch",
+      "description": "",
+      "startHour": 14,
+      "endHour": 15,
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "jobs": [
+        {
+          "name": "chef",
+          "title": "Lunch Chef",
+          "persons": 2
+        },
+        {
+          "name": "cleaning",
+          "title": "Lunch Cleaning",
+          "persons": 2
+        }
+      ]
+    },
+    {
+      "type": "daily",
+      "calendar": "events",
+      "name": "spa",
+      "title": "SPArkling Night",
+      "description": "",
+      "startHour": 18,
+      "endHour": 22,
+      "days": [
+        4
+      ],
+      "jobs": [
+        {
+          "name": "fire",
+          "title": "Fire Keeper",
+          "persons": 1
+        },
+        {
+          "name": "soup",
+          "title": "Soup Preparation",
+          "persons": 1
+        },
+        {
+          "name": "lakshmi",
+          "title": "Lakshmi Fairy",
+          "persons": 1
+        },
+        {
+          "name": "cleaning",
+          "title": "Cleaning",
+          "persons": 1
+        }
+      ]
+    },
+    {
+      "type": "weekly",
+      "calendar": "community",
+      "name": "week-fairy",
+      "title": "Fairy of the Week",
+      "description": "",
+      "jobs": [
+        {
+          "name": "fairy",
+          "title": "Fairy",
+          "persons": 2
+        }
+      ]
+    }
+  ]
+}
