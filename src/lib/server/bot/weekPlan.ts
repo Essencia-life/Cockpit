@@ -15,6 +15,53 @@ import weekPlan, {
 	formatMeditation
 } from '../week-plan';
 import type { TelegramUser } from '$lib/server/users.ts';
+import weeklyJobs from '$lib/config/weekly-jobs.json';
+import {
+	matchesRelationToLunarPhase,
+	type LunarRelation,
+	type Weekday
+} from '$lib/utils/lunar-matching.ts';
+import lunarProvider, { type MoonPhase } from '$lib/utils/lunar-provider.ts';
+
+interface BaseJobConfig {
+	calendar: 'community' | 'events';
+	name: string;
+	title: string;
+	description: string;
+	jobs: JobDefinition[];
+}
+
+interface JobDefinition {
+	name: string;
+	title: string;
+	persons: 1 | 2;
+	askDetails?: boolean;
+}
+
+interface DailyJobConfig extends BaseJobConfig {
+	type: 'daily';
+	startTime: [number, number];
+	endTime: [number, number];
+	weekdays: Weekday[];
+}
+
+interface WeeklyJobConfig extends BaseJobConfig {
+	type: 'weekly';
+}
+
+interface MoonCycleJobConfig extends BaseJobConfig {
+	type: 'moon';
+	startTime: [number, number];
+	endTime: [number, number];
+	weekday: Weekday;
+	phase: MoonPhase;
+	relation: LunarRelation;
+}
+
+type WeeklyJobsConfig = DailyJobConfig | WeeklyJobConfig | MoonCycleJobConfig;
+type WeeklyJobsConfigs = WeeklyJobsConfig[];
+
+const timeZone = 'Europe/Lisbon';
 
 export class WeekPlanBot {
 	constructor(
@@ -152,77 +199,84 @@ export class WeekPlanBot {
 	}
 
 	public async sendWeekPlan() {
-		const groups = await this.getGroups();
+		// const groups = await this.getGroups();
 
 		const today = new Date();
 		const weekDutyStart = new Date(
 			today.getFullYear(),
 			today.getMonth(),
-			today.getDate() - today.getDay() + 1
+			today.getDate() - today.getDay() + 8
 		);
 
 		console.info('Sending week plan starting from', weekDutyStart);
 
-		let firstMessage;
-		for (let i = 0; i < 5; i++) {
-			const date = new Date(
-				weekDutyStart.getFullYear(),
-				weekDutyStart.getMonth(),
-				weekDutyStart.getDate() + i
-			);
+		const events = await this.createCalendarEvents(weekDutyStart);
 
-			const message = await this.bot.api.sendMessage(groups.Home, formatDayPlan(date), {
-				message_thread_id: groups.HomeWeekPlanningThread,
-				parse_mode: 'HTML'
-			});
+		console.log(events);
 
-			await this.bot.api.editMessageReplyMarkup(groups.Home, message.message_id, {
-				reply_markup: buildDayPlanKeyboard(date, message.message_id)
-			});
+		// TODO build messages based on config and use event IDs in callback button
+		// TODO save message IDs in events
 
-			if (i === 0) {
-				firstMessage = message;
-			}
-		}
-
-		await this.bot.api.sendMessage(
-			groups.Home,
-			'✍️ Please sign up for the upcoming week before the Monday morning planning meeting by tapping one of the buttons.',
-			{
-				message_thread_id: groups.HomeWeekPlanningThread,
-				reply_parameters: firstMessage && {
-					message_id: firstMessage.message_id
-				}
-			}
-		);
+		// let firstMessage;
+		// for (let i = 0; i < 5; i++) {
+		// 	const date = new Date(
+		// 		weekDutyStart.getFullYear(),
+		// 		weekDutyStart.getMonth(),
+		// 		weekDutyStart.getDate() + i
+		// 	);
+		//
+		// 	const message = await this.bot.api.sendMessage(groups.Home, formatDayPlan(date), {
+		// 		message_thread_id: groups.HomeWeekPlanningThread,
+		// 		parse_mode: 'HTML'
+		// 	});
+		//
+		// 	await this.bot.api.editMessageReplyMarkup(groups.Home, message.message_id, {
+		// 		reply_markup: buildDayPlanKeyboard(date, message.message_id)
+		// 	});
+		//
+		// 	if (i === 0) {
+		// 		firstMessage = message;
+		// 	}
+		// }
+		//
+		// await this.bot.api.sendMessage(
+		// 	groups.Home,
+		// 	'✍️ Please sign up for the upcoming week before the Monday morning planning meeting by tapping one of the buttons.',
+		// 	{
+		// 		message_thread_id: groups.HomeWeekPlanningThread,
+		// 		reply_parameters: firstMessage && {
+		// 			message_id: firstMessage.message_id
+		// 		}
+		// 	}
+		// );
 	}
 
 	public async updateWeekPlanDay(messageId: number, event: CalendarEvent) {
-		const groups = await this.getGroups();
-		const date = new Date(event.start!.dateTime!);
-		date.setHours(0, 0, 0, 0);
-
-		const { lunchProps, practiseProps, meditationProps } = await getDayPlanProps(date, event);
-
-		try {
-			await this.bot.api.editMessageText(
-				groups.Home,
-				messageId,
-				formatDayPlan(date, lunchProps, practiseProps, meditationProps),
-				{
-					parse_mode: 'HTML',
-					reply_markup: buildDayPlanKeyboard(
-						date,
-						messageId,
-						lunchProps,
-						practiseProps,
-						meditationProps
-					)
-				}
-			);
-		} catch (err) {
-			console.warn(err);
-		}
+		// const groups = await this.getGroups();
+		// const date = new Date(event.start!.dateTime!);
+		// date.setHours(0, 0, 0, 0);
+		//
+		// const { lunchProps, practiseProps, meditationProps } = await getDayPlanProps(date, event);
+		//
+		// try {
+		// 	await this.bot.api.editMessageText(
+		// 		groups.Home,
+		// 		messageId,
+		// 		formatDayPlan(date, lunchProps, practiseProps, meditationProps),
+		// 		{
+		// 			parse_mode: 'HTML',
+		// 			reply_markup: buildDayPlanKeyboard(
+		// 				date,
+		// 				messageId,
+		// 				lunchProps,
+		// 				practiseProps,
+		// 				meditationProps
+		// 			)
+		// 		}
+		// 	);
+		// } catch (err) {
+		// 	console.warn(err);
+		// }
 	}
 
 	private async getGroups(): Promise<MakeRequired<BotConfig, 'Home' | 'HomeWeekPlanningThread'>> {
@@ -234,6 +288,92 @@ export class WeekPlanBot {
 
 		return groups;
 	}
+
+	private async createCalendarEvents(weekDutyStart: Date) {
+		console.info('Create events', weekDutyStart);
+
+		const events: CalendarEvent[] = [];
+
+		for (const config of weeklyJobs.config as WeeklyJobsConfigs) {
+			if (config.type === 'weekly') {
+				const weekDutyEnd = new Date(
+					weekDutyStart.getFullYear(),
+					weekDutyStart.getMonth(),
+					weekDutyStart.getDate() + 5
+				);
+
+				events.push({
+					summary: config.title,
+					description: config.description,
+					start: { date: weekDutyStart.toISOString().substring(0, 10), timeZone },
+					end: { date: weekDutyEnd.toISOString().substring(0, 10), timeZone },
+					extendedProperties: {
+						private: {
+							source: 'week-plan',
+							type: config.name,
+							jobs: JSON.stringify(
+								Object.fromEntries(
+									config.jobs.map((jobDef) => [jobDef.name, [{ id: 0, name: 'User' }]])
+								)
+							)
+						}
+					}
+				});
+			} else {
+				for (let i = 0; i < 5; i++) {
+					const date = new Date(
+						weekDutyStart.getFullYear(),
+						weekDutyStart.getMonth(),
+						weekDutyStart.getDate() + i
+					);
+
+					const dailyCondition = config.type === 'daily' && isWeekdays(config, date);
+					const moonCondition = config.type === 'moon' && isWeekdayInMoon(config, date);
+
+					if (dailyCondition || moonCondition) {
+						const startDateTime = new Date(date);
+						const endDateTime = new Date(date);
+
+						startDateTime.setHours(...config.startTime);
+						endDateTime.setHours(...config.endTime);
+
+						events.push({
+							summary: config.title,
+							description: config.description,
+							start: { dateTime: startDateTime.toISOString(), timeZone },
+							end: { dateTime: endDateTime.toISOString(), timeZone },
+							extendedProperties: {
+								private: {
+									source: 'week-plan',
+									type: config.name,
+									jobs: JSON.stringify(
+										Object.fromEntries(
+											config.jobs.map((jobDef) => [jobDef.name, [{ id: 0, name: 'User' }]])
+										)
+									)
+								}
+							}
+						});
+					}
+				}
+			}
+		}
+
+		// TODO get existing events of calendars with source=week-plan filter
+		// TODO create/update events in calendars
+
+		// TODO return a mix of config and event ids
+
+		return events;
+	}
+}
+
+function isWeekdays(config: DailyJobConfig, date: Date) {
+	return config.weekdays.includes(date.getDay() as Weekday);
+}
+
+function isWeekdayInMoon(config: MoonCycleJobConfig, date: Date) {
+	return matchesRelationToLunarPhase(date, config, lunarProvider);
 }
 
 async function fetchEventProps<T extends EventPrivateProps>(type: WeekPlanType, date: Date) {
