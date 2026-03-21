@@ -21,8 +21,8 @@ export default {
 					widget: 'select',
 					options: ['event', 'retreat']
 				},
-				{ name: 'start', label: 'Start Date & Time', widget: 'datetime' },
-				{ name: 'end', label: 'End Date & Time', widget: 'datetime' },
+				{ name: 'start', label: 'Start Date & Time', widget: 'datetime', picker_utc: true },
+				{ name: 'end', label: 'End Date & Time', widget: 'datetime', picker_utc: true },
 				{ name: 'cover_image', label: 'Cover Image', widget: 'file', choose_url: false },
 				{
 					name: 'short_description',
