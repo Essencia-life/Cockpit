@@ -14,7 +14,14 @@
 					repo: 'Essencia-life/Cockpit',
 					branch: 'main',
 					base_url: 'https://essencia-cockpit.vercel.app',
-					auth_endpoint: resolve('/api/cms/auth')
+					auth_endpoint: resolve('/api/cms/auth'),
+					commit_messages: {
+						create: 'feat({{collection}}): created “{{slug}}”',
+						update: 'feat({{collection}}): updated “{{slug}}”',
+						delete: 'feat({{collection}}): deleted “{{slug}}”',
+						uploadMedia: 'feat({{collection}}): uploaded “{{path}}”',
+						deleteMedia: 'feat({{collection}}): deleted “{{path}}”'
+					}
 				},
 				load_config_file: false,
 				media_folder: 'src/lib/assets',

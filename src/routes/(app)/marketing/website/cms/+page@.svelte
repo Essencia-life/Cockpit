@@ -22,7 +22,14 @@
 					repo: 'Essencia-life/Website',
 					branch: 'main',
 					base_url: 'https://essencia-cockpit.vercel.app',
-					auth_endpoint: resolve('/api/cms/auth')
+					auth_endpoint: resolve('/api/cms/auth'),
+					commit_messages: {
+						create: 'docs({{collection}}): created “{{slug}}”',
+						update: 'docs({{collection}}): updated “{{slug}}”',
+						delete: 'docs({{collection}}): deleted “{{slug}}”',
+						uploadMedia: 'docs({{collection}}): uploaded “{{path}}”',
+						deleteMedia: 'docs({{collection}}): deleted “{{path}}”'
+					}
 				},
 				load_config_file: false,
 				site_url: 'https://www.essencia.life',
