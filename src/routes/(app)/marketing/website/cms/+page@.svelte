@@ -14,6 +14,7 @@
 	import eventCalendar from '$lib/cms/editor-components/event-calendar.js';
 	import imageAndContent from '$lib/cms/editor-components/image-and-content.js';
 	import button from '$lib/cms/editor-components/button.js';
+	import instagram from '$lib/cms/editor-components/instagram.js';
 
 	function ready() {
 		window.CMS.init({
@@ -69,6 +70,7 @@
 		window.CMS.registerEditorComponent(eventCalendar);
 		window.CMS.registerEditorComponent(imageAndContent);
 		window.CMS.registerEditorComponent(button);
+		window.CMS.registerEditorComponent(instagram);
 	}
 </script>
 
