@@ -6,6 +6,7 @@
       "name": "meditation",
       "title": "Guided meditation",
       "description": "",
+      "location": "Shala",
       "startTime": [7,0],
       "endTime": [8,0],
       "weekdays": [
@@ -27,6 +28,7 @@
       "name": "practice",
       "title": "Morning Practice",
       "description": "",
+      "location": "Shala",
       "startTime": [8,0],
       "endTime": [9,0],
       "weekdays": [
@@ -51,6 +53,7 @@
       "name": "lunch",
       "title": "Lunch",
       "description": "",
+      "location": "Fun Kitchen",
       "startTime": [14,0],
       "endTime": [15,0],
       "weekdays": [
@@ -127,11 +130,12 @@
       "name": "forum",
       "title": "Forum",
       "description": "",
+      "location": "Shala",
       "startTime": [12, 0],
       "endTime": [13, 30],
       "weekday": 5,
       "phase": "NEW_MOON",
-      "relation": "NOT_LAST_BEFORE",
+      "relation": "NOT_LAST_ON_OR_BEFORE",
       "jobs": [
         {
           "name": "spaceholder",
@@ -146,6 +150,7 @@
       "name": "innovations",
       "title": "Innovations",
       "description": "",
+      "location": "Hive",
       "startTime": [12, 0],
       "endTime": [13, 30],
       "weekday": 5,

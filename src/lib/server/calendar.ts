@@ -4,6 +4,7 @@ import { GOOGLE_API_USER, GOOGLE_API_KEY, COMMUNITY_CALENDAR_ID } from '$env/sta
 const auth = new google.auth.JWT({
 	email: GOOGLE_API_USER,
 	key: GOOGLE_API_KEY,
+	subject: 'tech@essencia.life', // TODO change to events@
 	scopes: ['https://www.googleapis.com/auth/calendar']
 });
 

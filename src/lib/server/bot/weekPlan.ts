@@ -1,6 +1,6 @@
 import { type Bot, InlineKeyboard } from 'grammy';
 import { type BotConfig, type BotGroups } from '$lib/server/bot/groups.ts';
-import calendar, { type CalendarEvent } from '$lib/server/calendar';
+import calendar, { Calendar, type CalendarEvent } from '$lib/server/calendar';
 import weekPlan, {
 	formatLunch,
 	formatLunchCleaning,
@@ -22,12 +22,15 @@ import {
 	type Weekday
 } from '$lib/utils/lunar-matching.ts';
 import lunarProvider, { type MoonPhase } from '$lib/utils/lunar-provider.ts';
+import { TEST_CALENDAR_ID } from '$env/static/private';
+import { calendar_v3 } from 'googleapis';
 
 interface BaseJobConfig {
 	calendar: 'community' | 'events';
 	name: string;
 	title: string;
 	description: string;
+	location?: string;
 	jobs: JobDefinition[];
 }
 
@@ -63,159 +66,164 @@ type WeeklyJobsConfigs = WeeklyJobsConfig[];
 
 const timeZone = 'Europe/Lisbon';
 
+const locationRoomMapping = new Map<string, calendar_v3.Schema$EventAttendee>([
+	[
+		'Shala',
+		{ email: 'c_1885fldmc9nuqjj3mjkeoq4b608h2@resource.calendar.google.com', resource: true }
+	],
+	[
+		'Hive',
+		{ email: 'c_1889c1tchb404ha0ilqe71f97m3ua@resource.calendar.google.com', resource: true }
+	]
+]);
+
 export class WeekPlanBot {
 	constructor(
 		private readonly bot: Bot,
 		private readonly botGroups: BotGroups
 	) {
-		const morningPractiseReply =
-			'Please let me know what morning practise you want to offer. First line title and second optional details.';
-
-		bot.callbackQuery(
-			/^plan:(?<date>\d{4}-\d{2}-\d{2}):(?<messageId>\d+):(?<task>\w+)$/,
-			async (ctx) => {
-				if (typeof ctx.match === 'object' && 'groups' in ctx.match) {
-					const date = new Date(ctx.match.groups!.date);
-					const messageId = parseInt(ctx.match.groups!.messageId);
-					const task = ctx.match.groups!.task as WeekPlanDuty;
-					const user = ctx.from!;
-
-					console.info('Received week-plan callbackQuery', { messageId, date, task, user });
-
-					let [event] = await weekPlan.getDay(
-						task === 'guide' ? 'meditation' : task === 'facilitator' ? 'morning-practise' : 'lunch',
-						date
-					);
-					const previousValue = parseTelegramUser(event?.extendedProperties?.private?.[task]);
-
-					if (previousValue) {
-						if (previousValue.id !== user.id) {
-							console.info(
-								`Can not sign ${user.first_name} as ${task} is already taken by ${previousValue.first_name}`
-							);
-
-							await this.updateWeekPlanDay(messageId, event);
-							return ctx.answerCallbackQuery({
-								show_alert: true,
-								text: `This job is already taken by ${previousValue.first_name}. If you want to takeover please ask them to remove themself by tapping this button again.`
-							});
-						} else {
-							console.info(`Remove ${previousValue.first_name} from ${task}`);
-
-							event = await weekPlan.removeFromDuty(event, task);
-
-							await this.updateWeekPlanDay(messageId, event);
-							return ctx.answerCallbackQuery({ text: '❎ you removed yourself' });
-						}
-					}
-
-					if (event) {
-						console.info('Update existing event');
-
-						event = await weekPlan.updateDuty(event, {
-							[task]: JSON.stringify(user)
-						});
-					} else if (task === 'guide') {
-						console.info('Create new event');
-
-						event = await weekPlan.insetMeditation(date, {
-							[task]: JSON.stringify(user)
-						});
-					} else {
-						console.info('Create new event');
-
-						event = await weekPlan.insetLunch(date, {
-							[task]: JSON.stringify(user)
-						});
-					}
-
-					await this.updateWeekPlanDay(messageId, event);
-					return ctx.answerCallbackQuery({ text: "✅ you've signed up" });
-				}
-			}
-		);
-
-		bot.command('start', async (ctx) => {
-			const match = ctx.match.match(/^practise_(?<date>\d{4}-\d{2}-\d{2})_(?<messageId>\d+)$/);
-
-			if (match !== null && 'groups' in match) {
-				const date = new Date(match.groups!.date);
-				const messageId = parseInt(match.groups!.messageId);
-				const user = ctx.from!;
-
-				console.info('Save facilitator', { messageId, date, user });
-
-				let [event] = await weekPlan.getDay('morning-practise', date);
-
-				const previousValue = parseTelegramUser(event?.extendedProperties?.private?.facilitator);
-				if (previousValue && previousValue.id !== user.id) {
-					console.info(
-						`Can not sign ${user.first_name} as facilitator is already taken by ${previousValue.first_name}`
-					);
-
-					await this.updateWeekPlanDay(messageId, event);
-					return ctx.reply(
-						`This job is already taken by ${previousValue.first_name}. If you want to takeover please ask them to remove themself by tapping the button again.`
-					);
-				}
-
-				if (event) {
-					event = await weekPlan.updateDuty(event, {
-						facilitator: JSON.stringify(user)
-					});
-				} else {
-					event = await weekPlan.insertPractise(date, {
-						facilitator: JSON.stringify(user)
-					});
-				}
-
-				await ctx.reply(`${morningPractiseReply}\n\n#${event.id}_${messageId}`, {
-					reply_markup: { force_reply: true }
-				});
-			}
-		});
-
-		bot.on('message:text', async (ctx, next) => {
-			if (
-				!ctx.message.reply_to_message?.text ||
-				!ctx.message.reply_to_message.text.startsWith(morningPractiseReply)
-			)
-				return next();
-
-			const [, eventId, messageIdStr] =
-				ctx.message.reply_to_message.text.match(/#(\w+)_(\d+)/) ?? [];
-			const messageId = parseInt(messageIdStr);
-			const practise = ctx.message.text;
-
-			let event = await calendar.getEvent(eventId);
-
-			console.info('Save practise', { messageId, eventId, practise });
-
-			event = await weekPlan.updateDuty(event, { practise });
-
-			await this.updateWeekPlanDay(messageId, event);
-			await ctx.react('👍');
-		});
+		// const morningPractiseReply =
+		// 	'Please let me know what morning practise you want to offer. First line title and second optional details.';
+		//
+		// bot.callbackQuery(
+		// 	/^plan:(?<date>\d{4}-\d{2}-\d{2}):(?<messageId>\d+):(?<task>\w+)$/,
+		// 	async (ctx) => {
+		// 		if (typeof ctx.match === 'object' && 'groups' in ctx.match) {
+		// 			const date = new Date(ctx.match.groups!.date);
+		// 			const messageId = parseInt(ctx.match.groups!.messageId);
+		// 			const task = ctx.match.groups!.task as WeekPlanDuty;
+		// 			const user = ctx.from!;
+		//
+		// 			console.info('Received week-plan callbackQuery', { messageId, date, task, user });
+		//
+		// 			let [event] = await weekPlan.getDay(
+		// 				task === 'guide' ? 'meditation' : task === 'facilitator' ? 'morning-practise' : 'lunch',
+		// 				date
+		// 			);
+		// 			const previousValue = parseTelegramUser(event?.extendedProperties?.private?.[task]);
+		//
+		// 			if (previousValue) {
+		// 				if (previousValue.id !== user.id) {
+		// 					console.info(
+		// 						`Can not sign ${user.first_name} as ${task} is already taken by ${previousValue.first_name}`
+		// 					);
+		//
+		// 					await this.updateWeekPlanDay(messageId, event);
+		// 					return ctx.answerCallbackQuery({
+		// 						show_alert: true,
+		// 						text: `This job is already taken by ${previousValue.first_name}. If you want to takeover please ask them to remove themself by tapping this button again.`
+		// 					});
+		// 				} else {
+		// 					console.info(`Remove ${previousValue.first_name} from ${task}`);
+		//
+		// 					event = await weekPlan.removeFromDuty(event, task);
+		//
+		// 					await this.updateWeekPlanDay(messageId, event);
+		// 					return ctx.answerCallbackQuery({ text: '❎ you removed yourself' });
+		// 				}
+		// 			}
+		//
+		// 			if (event) {
+		// 				console.info('Update existing event');
+		//
+		// 				event = await weekPlan.updateDuty(event, {
+		// 					[task]: JSON.stringify(user)
+		// 				});
+		// 			} else if (task === 'guide') {
+		// 				console.info('Create new event');
+		//
+		// 				event = await weekPlan.insetMeditation(date, {
+		// 					[task]: JSON.stringify(user)
+		// 				});
+		// 			} else {
+		// 				console.info('Create new event');
+		//
+		// 				event = await weekPlan.insetLunch(date, {
+		// 					[task]: JSON.stringify(user)
+		// 				});
+		// 			}
+		//
+		// 			await this.updateWeekPlanDay(messageId, event);
+		// 			return ctx.answerCallbackQuery({ text: "✅ you've signed up" });
+		// 		}
+		// 	}
+		// );
+		//
+		// bot.command('start', async (ctx) => {
+		// 	const match = ctx.match.match(/^practise_(?<date>\d{4}-\d{2}-\d{2})_(?<messageId>\d+)$/);
+		//
+		// 	if (match !== null && 'groups' in match) {
+		// 		const date = new Date(match.groups!.date);
+		// 		const messageId = parseInt(match.groups!.messageId);
+		// 		const user = ctx.from!;
+		//
+		// 		console.info('Save facilitator', { messageId, date, user });
+		//
+		// 		let [event] = await weekPlan.getDay('morning-practise', date);
+		//
+		// 		const previousValue = parseTelegramUser(event?.extendedProperties?.private?.facilitator);
+		// 		if (previousValue && previousValue.id !== user.id) {
+		// 			console.info(
+		// 				`Can not sign ${user.first_name} as facilitator is already taken by ${previousValue.first_name}`
+		// 			);
+		//
+		// 			await this.updateWeekPlanDay(messageId, event);
+		// 			return ctx.reply(
+		// 				`This job is already taken by ${previousValue.first_name}. If you want to takeover please ask them to remove themself by tapping the button again.`
+		// 			);
+		// 		}
+		//
+		// 		if (event) {
+		// 			event = await weekPlan.updateDuty(event, {
+		// 				facilitator: JSON.stringify(user)
+		// 			});
+		// 		} else {
+		// 			event = await weekPlan.insertPractise(date, {
+		// 				facilitator: JSON.stringify(user)
+		// 			});
+		// 		}
+		//
+		// 		await ctx.reply(`${morningPractiseReply}\n\n#${event.id}_${messageId}`, {
+		// 			reply_markup: { force_reply: true }
+		// 		});
+		// 	}
+		// });
+		//
+		// bot.on('message:text', async (ctx, next) => {
+		// 	if (
+		// 		!ctx.message.reply_to_message?.text ||
+		// 		!ctx.message.reply_to_message.text.startsWith(morningPractiseReply)
+		// 	)
+		// 		return next();
+		//
+		// 	const [, eventId, messageIdStr] =
+		// 		ctx.message.reply_to_message.text.match(/#(\w+)_(\d+)/) ?? [];
+		// 	const messageId = parseInt(messageIdStr);
+		// 	const practise = ctx.message.text;
+		//
+		// 	let event = await calendar.getEvent(eventId);
+		//
+		// 	console.info('Save practise', { messageId, eventId, practise });
+		//
+		// 	event = await weekPlan.updateDuty(event, { practise });
+		//
+		// 	await this.updateWeekPlanDay(messageId, event);
+		// 	await ctx.react('👍');
+		// });
 	}
 
 	public async sendWeekPlan() {
-		// const groups = await this.getGroups();
-
 		const today = new Date();
 		const weekDutyStart = new Date(
 			today.getFullYear(),
 			today.getMonth(),
-			today.getDate() - today.getDay() + 8
+			today.getDate() - today.getDay() + 9
 		);
 
 		console.info('Sending week plan starting from', weekDutyStart);
 
 		const events = await this.createCalendarEvents(weekDutyStart);
-
-		console.log(events);
-
-		// TODO build messages based on config and use event IDs in callback button
-		// TODO save message IDs in events
+		await this.buildAndSendMessages(events);
 
 		// let firstMessage;
 		// for (let i = 0; i < 5; i++) {
@@ -305,6 +313,7 @@ export class WeekPlanBot {
 				events.push({
 					summary: config.title,
 					description: config.description,
+					// FIXME week begin + end
 					start: { date: weekDutyStart.toISOString().substring(0, 10), timeZone },
 					end: { date: weekDutyEnd.toISOString().substring(0, 10), timeZone },
 					extendedProperties: {
@@ -337,7 +346,7 @@ export class WeekPlanBot {
 						startDateTime.setHours(...config.startTime);
 						endDateTime.setHours(...config.endTime);
 
-						events.push({
+						const event: CalendarEvent = {
 							summary: config.title,
 							description: config.description,
 							start: { dateTime: startDateTime.toISOString(), timeZone },
@@ -353,18 +362,43 @@ export class WeekPlanBot {
 									)
 								}
 							}
-						});
+						};
+
+						if (config.location) {
+							// if (locationRoomMapping.has(config.location)) {
+							// 	event.attendees = [locationRoomMapping.get(config.location)!];
+							// } else {
+							event.location = config.location;
+							// }
+						}
+
+						events.push(event);
 					}
 				}
 			}
 		}
 
 		// TODO get existing events of calendars with source=week-plan filter
-		// TODO create/update events in calendars
+		// TODO update events in calendars
 
-		// TODO return a mix of config and event ids
+		// const calendar = new Calendar(TEST_CALENDAR_ID);
+		// for (const event of events) {
+		// 	const response = await calendar.insertEvent(event);
+		// 	Object.assign(event, response.data);
+		// }
+
+		console.info('Created ', events.length, 'events');
 
 		return events;
+	}
+
+	private async buildAndSendMessages(events: CalendarEvent[]) {
+		const groups = await this.getGroups();
+
+		console.log(events);
+		// TODO get config with config name of event props
+		// TODO use event IDs in callback button
+		// TODO save message IDs in events
 	}
 }
 
@@ -376,97 +410,97 @@ function isWeekdayInMoon(config: MoonCycleJobConfig, date: Date) {
 	return matchesRelationToLunarPhase(date, config, lunarProvider);
 }
 
-async function fetchEventProps<T extends EventPrivateProps>(type: WeekPlanType, date: Date) {
-	const [event] = await weekPlan.getDay(type, date);
-	return event?.extendedProperties?.private as T | undefined;
-}
-
-async function getDayPlanProps(date: Date, event?: CalendarEvent) {
-	let lunchProps: EventPrivatePropsLunch | undefined;
-	let practiseProps: EventPrivatePropsPractise | undefined;
-	let meditationProps: EventPrivatePropsMeditation | undefined;
-
-	const privateProps = event?.extendedProperties?.private as EventPrivateProps | undefined;
-
-	if (privateProps?.type === 'lunch') {
-		lunchProps = privateProps;
-	} else if (privateProps?.type === 'morning-practise') {
-		practiseProps = privateProps;
-	} else if (privateProps?.type === 'meditation') {
-		meditationProps = privateProps;
-	}
-
-	lunchProps ||= await fetchEventProps('lunch', date);
-	practiseProps ||= await fetchEventProps('morning-practise', date);
-	meditationProps ||= await fetchEventProps('meditation', date);
-
-	return { lunchProps, practiseProps, meditationProps };
-}
-
-function formatDayPlan(
-	date: Date,
-	lunchProps?: EventPrivatePropsLunch,
-	practiseProps?: EventPrivatePropsPractise,
-	meditationProps?: EventPrivatePropsMeditation
-) {
-	const plan = [
-		`<b>${date.toLocaleDateString('en', { weekday: 'long' })}</b> / ${date.toLocaleDateString('pt', { weekday: 'long', day: 'numeric', month: 'numeric' })}`
-	];
-
-	if (date.getDay() === 2 || date.getDay() === 4) {
-		plan.push(`<u>Morning Meditation</u>
-🧘️ ${formatMeditation(meditationProps)}`);
-	}
-
-	plan.push(`<u>Morning Practise</u>
-🤸 ${formatMorningPractise(practiseProps)}`);
-
-	plan.push(`<u>Lunch</u>
-🧑‍🍳 ${formatLunch(lunchProps)}`);
-
-	plan.push(`<u>Lunch Cleaning</u>
-🧽 ${formatLunchCleaning(lunchProps)}`);
-
-	return plan.join('\n\n');
-}
-
-function buildDayPlanKeyboard(
-	date: Date,
-	messageId: number,
-	lunchProps?: EventPrivatePropsLunch,
-	practiseProps?: EventPrivatePropsPractise,
-	meditationProps?: EventPrivatePropsMeditation
-) {
-	const dateStr = date.toISOString().substring(0, 10);
-	const key = (task: string) => `plan:${dateStr}:${messageId}:${task}`;
-	const check = (user?: TelegramUser) => (user ? '✅ ' : '⭕️ ');
-
-	const chef = lunchProps && parseTelegramUser(lunchProps.chef);
-	const chef2 = lunchProps && parseTelegramUser(lunchProps.chef2);
-	const cleaner = lunchProps && parseTelegramUser(lunchProps.cleaner);
-	const facilitator = practiseProps && parseTelegramUser(practiseProps.facilitator);
-	const guide = meditationProps && parseTelegramUser(meditationProps.guide);
-
-	let keyboard = new InlineKeyboard();
-
-	if (date.getDay() === 2 || date.getDay() === 4) {
-		keyboard = keyboard.text(check(guide) + 'Meditation Guide', key('guide')).row();
-	}
-
-	keyboard = keyboard
-		.add(
-			facilitator
-				? InlineKeyboard.text('✅ Morning Practise', key('facilitator'))
-				: InlineKeyboard.url(
-						'⭕️ Morning Practise',
-						`https://t.me/EssenciaOrgaBot?start=practise_${dateStr}_${messageId}`
-					)
-		)
-		.row()
-		.text(check(chef) + 'Lunch Chef', key('chef'))
-		.text(check(chef2) + 'Lunch Chef', key('chef2'))
-		.row()
-		.text(check(cleaner) + 'Lunch Cleaning', key('cleaner'));
-
-	return keyboard;
-}
+// async function fetchEventProps<T extends EventPrivateProps>(type: WeekPlanType, date: Date) {
+// 	const [event] = await weekPlan.getDay(type, date);
+// 	return event?.extendedProperties?.private as T | undefined;
+// }
+//
+// async function getDayPlanProps(date: Date, event?: CalendarEvent) {
+// 	let lunchProps: EventPrivatePropsLunch | undefined;
+// 	let practiseProps: EventPrivatePropsPractise | undefined;
+// 	let meditationProps: EventPrivatePropsMeditation | undefined;
+//
+// 	const privateProps = event?.extendedProperties?.private as EventPrivateProps | undefined;
+//
+// 	if (privateProps?.type === 'lunch') {
+// 		lunchProps = privateProps;
+// 	} else if (privateProps?.type === 'morning-practise') {
+// 		practiseProps = privateProps;
+// 	} else if (privateProps?.type === 'meditation') {
+// 		meditationProps = privateProps;
+// 	}
+//
+// 	lunchProps ||= await fetchEventProps('lunch', date);
+// 	practiseProps ||= await fetchEventProps('morning-practise', date);
+// 	meditationProps ||= await fetchEventProps('meditation', date);
+//
+// 	return { lunchProps, practiseProps, meditationProps };
+// }
+//
+// function formatDayPlan(
+// 	date: Date,
+// 	lunchProps?: EventPrivatePropsLunch,
+// 	practiseProps?: EventPrivatePropsPractise,
+// 	meditationProps?: EventPrivatePropsMeditation
+// ) {
+// 	const plan = [
+// 		`<b>${date.toLocaleDateString('en', { weekday: 'long' })}</b> / ${date.toLocaleDateString('pt', { weekday: 'long', day: 'numeric', month: 'numeric' })}`
+// 	];
+//
+// 	if (date.getDay() === 2 || date.getDay() === 4) {
+// 		plan.push(`<u>Morning Meditation</u>
+// 🧘️ ${formatMeditation(meditationProps)}`);
+// 	}
+//
+// 	plan.push(`<u>Morning Practise</u>
+// 🤸 ${formatMorningPractise(practiseProps)}`);
+//
+// 	plan.push(`<u>Lunch</u>
+// 🧑‍🍳 ${formatLunch(lunchProps)}`);
+//
+// 	plan.push(`<u>Lunch Cleaning</u>
+// 🧽 ${formatLunchCleaning(lunchProps)}`);
+//
+// 	return plan.join('\n\n');
+// }
+//
+// function buildDayPlanKeyboard(
+// 	date: Date,
+// 	messageId: number,
+// 	lunchProps?: EventPrivatePropsLunch,
+// 	practiseProps?: EventPrivatePropsPractise,
+// 	meditationProps?: EventPrivatePropsMeditation
+// ) {
+// 	const dateStr = date.toISOString().substring(0, 10);
+// 	const key = (task: string) => `plan:${dateStr}:${messageId}:${task}`;
+// 	const check = (user?: TelegramUser) => (user ? '✅ ' : '⭕️ ');
+//
+// 	const chef = lunchProps && parseTelegramUser(lunchProps.chef);
+// 	const chef2 = lunchProps && parseTelegramUser(lunchProps.chef2);
+// 	const cleaner = lunchProps && parseTelegramUser(lunchProps.cleaner);
+// 	const facilitator = practiseProps && parseTelegramUser(practiseProps.facilitator);
+// 	const guide = meditationProps && parseTelegramUser(meditationProps.guide);
+//
+// 	let keyboard = new InlineKeyboard();
+//
+// 	if (date.getDay() === 2 || date.getDay() === 4) {
+// 		keyboard = keyboard.text(check(guide) + 'Meditation Guide', key('guide')).row();
+// 	}
+//
+// 	keyboard = keyboard
+// 		.add(
+// 			facilitator
+// 				? InlineKeyboard.text('✅ Morning Practise', key('facilitator'))
+// 				: InlineKeyboard.url(
+// 						'⭕️ Morning Practise',
+// 						`https://t.me/EssenciaOrgaBot?start=practise_${dateStr}_${messageId}`
+// 					)
+// 		)
+// 		.row()
+// 		.text(check(chef) + 'Lunch Chef', key('chef'))
+// 		.text(check(chef2) + 'Lunch Chef', key('chef2'))
+// 		.row()
+// 		.text(check(cleaner) + 'Lunch Cleaning', key('cleaner'));
+//
+// 	return keyboard;
+// }
