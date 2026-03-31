@@ -142,6 +142,7 @@ function formatDuration(event: CalendarEvent) {
 
 function formatEvent(event: CalendarEvent): string {
 	const time = new Date(event.start!.dateTime!).toLocaleTimeString('en', {
+		timeZone: event.start?.timeZone ?? undefined,
 		hour12: false,
 		hour: '2-digit',
 		minute: '2-digit'
