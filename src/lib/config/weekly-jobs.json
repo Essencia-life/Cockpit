@@ -105,7 +105,7 @@
         },
         {
           "name": "cleaning",
-          "title": "Cleaning",
+          "title": "SPA Cleaning",
           "persons": 1
         }
       ]
@@ -139,7 +139,7 @@
       "jobs": [
         {
           "name": "spaceholder",
-          "title": "Spaceholer",
+          "title": "Forum Spaceholer",
           "persons": 1
         }
       ]
@@ -159,17 +159,17 @@
       "jobs": [
         {
           "name": "moderator",
-          "title": "Moderator",
+          "title": "Innovations Moderator",
           "persons": 1
         },
         {
           "name": "timekeeper",
-          "title": "Time Keeper",
+          "title": "Innovations Time Keeper",
           "persons": 1
         },
         {
           "name": "writer",
-          "title": "Writer",
+          "title": "Innovations Writer",
           "persons": 1
         }
       ]

@@ -12,7 +12,8 @@ import weekPlan, {
 	type WeekPlanDuty,
 	type WeekPlanType,
 	type EventPrivatePropsMeditation,
-	formatMeditation
+	formatMeditation,
+	formatTelegramUsers
 } from '../week-plan';
 import type { TelegramUser } from '$lib/server/users.ts';
 import weeklyJobs from '$lib/config/weekly-jobs.json';
@@ -24,6 +25,8 @@ import {
 import lunarProvider, { type MoonPhase } from '$lib/utils/lunar-provider.ts';
 import { TEST_CALENDAR_ID } from '$env/static/private';
 import { calendar_v3 } from 'googleapis';
+
+const configs = weeklyJobs.config as WeeklyJobsConfigs;
 
 interface BaseJobConfig {
 	calendar: 'community' | 'events';
@@ -38,7 +41,7 @@ interface JobDefinition {
 	name: string;
 	title: string;
 	persons: 1 | 2;
-	askDetails?: boolean;
+	askDetails?: boolean; // TODO only for one person
 }
 
 interface DailyJobConfig extends BaseJobConfig {
@@ -77,11 +80,20 @@ const locationRoomMapping = new Map<string, calendar_v3.Schema$EventAttendee>([
 	]
 ]);
 
+interface EventProps {
+	source: 'week-plan';
+	type: string;
+	jobs: string;
+	planMessageId?: string;
+	agendaMessageId?: string;
+}
+
 export class WeekPlanBot {
 	constructor(
 		private readonly bot: Bot,
 		private readonly botGroups: BotGroups
 	) {
+		// TODO
 		// const morningPractiseReply =
 		// 	'Please let me know what morning practise you want to offer. First line title and second optional details.';
 		//
@@ -217,49 +229,17 @@ export class WeekPlanBot {
 		const weekDutyStart = new Date(
 			today.getFullYear(),
 			today.getMonth(),
-			today.getDate() - today.getDay() + 9
+			today.getDate() - today.getDay() + 8
 		);
 
 		console.info('Sending week plan starting from', weekDutyStart);
 
 		const events = await this.createCalendarEvents(weekDutyStart);
 		await this.buildAndSendMessages(events);
-
-		// let firstMessage;
-		// for (let i = 0; i < 5; i++) {
-		// 	const date = new Date(
-		// 		weekDutyStart.getFullYear(),
-		// 		weekDutyStart.getMonth(),
-		// 		weekDutyStart.getDate() + i
-		// 	);
-		//
-		// 	const message = await this.bot.api.sendMessage(groups.Home, formatDayPlan(date), {
-		// 		message_thread_id: groups.HomeWeekPlanningThread,
-		// 		parse_mode: 'HTML'
-		// 	});
-		//
-		// 	await this.bot.api.editMessageReplyMarkup(groups.Home, message.message_id, {
-		// 		reply_markup: buildDayPlanKeyboard(date, message.message_id)
-		// 	});
-		//
-		// 	if (i === 0) {
-		// 		firstMessage = message;
-		// 	}
-		// }
-		//
-		// await this.bot.api.sendMessage(
-		// 	groups.Home,
-		// 	'✍️ Please sign up for the upcoming week before the Monday morning planning meeting by tapping one of the buttons.',
-		// 	{
-		// 		message_thread_id: groups.HomeWeekPlanningThread,
-		// 		reply_parameters: firstMessage && {
-		// 			message_id: firstMessage.message_id
-		// 		}
-		// 	}
-		// );
 	}
 
 	public async updateWeekPlanDay(messageId: number, event: CalendarEvent) {
+		// TODO
 		// const groups = await this.getGroups();
 		// const date = new Date(event.start!.dateTime!);
 		// date.setHours(0, 0, 0, 0);
@@ -300,9 +280,9 @@ export class WeekPlanBot {
 	private async createCalendarEvents(weekDutyStart: Date) {
 		console.info('Create events', weekDutyStart);
 
-		const events: CalendarEvent[] = [];
+		const groupedEvents = new Map<string, CalendarEvent[]>();
 
-		for (const config of weeklyJobs.config as WeeklyJobsConfigs) {
+		for (const config of configs) {
 			if (config.type === 'weekly') {
 				const weekDutyEnd = new Date(
 					weekDutyStart.getFullYear(),
@@ -310,7 +290,13 @@ export class WeekPlanBot {
 					weekDutyStart.getDate() + 5
 				);
 
-				events.push({
+				const label = `<b>Week</b> ${weekDutyStart.toLocaleDateString('pt', { day: 'numeric', month: 'numeric' })} - ${weekDutyEnd.toLocaleDateString('pt', { day: 'numeric', month: 'numeric' })}`;
+
+				if (!groupedEvents.has(label)) {
+					groupedEvents.set(label, []);
+				}
+
+				groupedEvents.get(label)!.push({
 					summary: config.title,
 					description: config.description,
 					// FIXME week begin + end
@@ -321,11 +307,9 @@ export class WeekPlanBot {
 							source: 'week-plan',
 							type: config.name,
 							jobs: JSON.stringify(
-								Object.fromEntries(
-									config.jobs.map((jobDef) => [jobDef.name, [{ id: 0, name: 'User' }]])
-								)
+								Object.fromEntries(config.jobs.map((jobDef) => [jobDef.name, []]))
 							)
-						}
+						} satisfies EventProps
 					}
 				});
 			} else {
@@ -356,15 +340,14 @@ export class WeekPlanBot {
 									source: 'week-plan',
 									type: config.name,
 									jobs: JSON.stringify(
-										Object.fromEntries(
-											config.jobs.map((jobDef) => [jobDef.name, [{ id: 0, name: 'User' }]])
-										)
+										Object.fromEntries(config.jobs.map((jobDef) => [jobDef.name, []]))
 									)
 								}
 							}
 						};
 
 						if (config.location) {
+							// TODO enable
 							// if (locationRoomMapping.has(config.location)) {
 							// 	event.attendees = [locationRoomMapping.get(config.location)!];
 							// } else {
@@ -372,7 +355,13 @@ export class WeekPlanBot {
 							// }
 						}
 
-						events.push(event);
+						const title = `<b>${date.toLocaleDateString('en', { weekday: 'long' })}</b> / ${date.toLocaleDateString('pt', { weekday: 'long', day: 'numeric', month: 'numeric' })}`;
+
+						if (!groupedEvents.has(title)) {
+							groupedEvents.set(title, []);
+						}
+
+						groupedEvents.get(title)!.push(event);
 					}
 				}
 			}
@@ -381,24 +370,95 @@ export class WeekPlanBot {
 		// TODO get existing events of calendars with source=week-plan filter
 		// TODO update events in calendars
 
+		// TODO enable
 		// const calendar = new Calendar(TEST_CALENDAR_ID);
 		// for (const event of events) {
 		// 	const response = await calendar.insertEvent(event);
 		// 	Object.assign(event, response.data);
 		// }
 
-		console.info('Created ', events.length, 'events');
-
-		return events;
+		return groupedEvents;
 	}
 
-	private async buildAndSendMessages(events: CalendarEvent[]) {
+	private async buildAndSendMessages(eventsGrouped: Map<string, CalendarEvent[]>) {
 		const groups = await this.getGroups();
 
-		console.log(events);
-		// TODO get config with config name of event props
-		// TODO use event IDs in callback button
-		// TODO save message IDs in events
+		let firstMessage;
+
+		for (const [title, events] of eventsGrouped.entries()) {
+			const plan = [title]; // TODO use tg date tag
+			let keyboard = new InlineKeyboard();
+
+			for (const event of events) {
+				const props = event.extendedProperties!.private! as unknown as EventProps;
+				const config = configs.find((config) => config.name === props.type);
+
+				if (config) {
+					const block = [`<u>${event.summary}</u>`];
+					const assignedJobs: Record<string, TelegramUser[]> = JSON.parse(
+						event.extendedProperties!.private!.jobs
+					);
+
+					for (const job of config.jobs) {
+						block.push(`↳ ${job.title}: ${formatTelegramUsers(assignedJobs[job.name])}`);
+
+						if (job.askDetails) {
+							const [assignee] = assignedJobs[job.name];
+							// TODO add details to block
+							keyboard = keyboard
+								.row()
+								.add(
+									assignee
+										? InlineKeyboard.text(
+												buttonStatus(job.title, true),
+												`${event.id}:${config.name}:${job.name}`
+											)
+										: InlineKeyboard.url(
+												buttonStatus(job.title, false),
+												`https://t.me/EssenciaOrgaBot?start=${event.id}_${config.name}_${job.name}`
+											)
+								);
+						} else {
+							keyboard = keyboard
+								.row()
+								.add(
+									...Array.from(Array(job.persons), (_, i) =>
+										InlineKeyboard.text(
+											buttonStatus(job.title, !!assignedJobs[job.name][i]),
+											`${event.id}:${config.name}:${job.name}`
+										)
+									)
+								);
+						}
+					}
+
+					plan.push(block.join('\n'));
+				}
+			}
+
+			const message = await this.bot.api.sendMessage(groups.Home, plan.join('\n\n'), {
+				message_thread_id: groups.HomeWeekPlanningThread,
+				parse_mode: 'HTML',
+				reply_markup: keyboard
+			});
+
+			if (!firstMessage) {
+				firstMessage = message;
+			}
+
+			// TODO save message ID in events
+		}
+
+		await this.bot.api.sendMessage(
+			groups.Home,
+			'✍️ Please sign up for the upcoming week before the Monday morning planning meeting by tapping one of the buttons.',
+			{
+				message_thread_id: groups.HomeWeekPlanningThread,
+				reply_parameters: firstMessage && {
+					message_id: firstMessage.message_id
+				}
+			}
+		);
 	}
 }
 
@@ -410,97 +470,6 @@ function isWeekdayInMoon(config: MoonCycleJobConfig, date: Date) {
 	return matchesRelationToLunarPhase(date, config, lunarProvider);
 }
 
-// async function fetchEventProps<T extends EventPrivateProps>(type: WeekPlanType, date: Date) {
-// 	const [event] = await weekPlan.getDay(type, date);
-// 	return event?.extendedProperties?.private as T | undefined;
-// }
-//
-// async function getDayPlanProps(date: Date, event?: CalendarEvent) {
-// 	let lunchProps: EventPrivatePropsLunch | undefined;
-// 	let practiseProps: EventPrivatePropsPractise | undefined;
-// 	let meditationProps: EventPrivatePropsMeditation | undefined;
-//
-// 	const privateProps = event?.extendedProperties?.private as EventPrivateProps | undefined;
-//
-// 	if (privateProps?.type === 'lunch') {
-// 		lunchProps = privateProps;
-// 	} else if (privateProps?.type === 'morning-practise') {
-// 		practiseProps = privateProps;
-// 	} else if (privateProps?.type === 'meditation') {
-// 		meditationProps = privateProps;
-// 	}
-//
-// 	lunchProps ||= await fetchEventProps('lunch', date);
-// 	practiseProps ||= await fetchEventProps('morning-practise', date);
-// 	meditationProps ||= await fetchEventProps('meditation', date);
-//
-// 	return { lunchProps, practiseProps, meditationProps };
-// }
-//
-// function formatDayPlan(
-// 	date: Date,
-// 	lunchProps?: EventPrivatePropsLunch,
-// 	practiseProps?: EventPrivatePropsPractise,
-// 	meditationProps?: EventPrivatePropsMeditation
-// ) {
-// 	const plan = [
-// 		`<b>${date.toLocaleDateString('en', { weekday: 'long' })}</b> / ${date.toLocaleDateString('pt', { weekday: 'long', day: 'numeric', month: 'numeric' })}`
-// 	];
-//
-// 	if (date.getDay() === 2 || date.getDay() === 4) {
-// 		plan.push(`<u>Morning Meditation</u>
-// 🧘️ ${formatMeditation(meditationProps)}`);
-// 	}
-//
-// 	plan.push(`<u>Morning Practise</u>
-// 🤸 ${formatMorningPractise(practiseProps)}`);
-//
-// 	plan.push(`<u>Lunch</u>
-// 🧑‍🍳 ${formatLunch(lunchProps)}`);
-//
-// 	plan.push(`<u>Lunch Cleaning</u>
-// 🧽 ${formatLunchCleaning(lunchProps)}`);
-//
-// 	return plan.join('\n\n');
-// }
-//
-// function buildDayPlanKeyboard(
-// 	date: Date,
-// 	messageId: number,
-// 	lunchProps?: EventPrivatePropsLunch,
-// 	practiseProps?: EventPrivatePropsPractise,
-// 	meditationProps?: EventPrivatePropsMeditation
-// ) {
-// 	const dateStr = date.toISOString().substring(0, 10);
-// 	const key = (task: string) => `plan:${dateStr}:${messageId}:${task}`;
-// 	const check = (user?: TelegramUser) => (user ? '✅ ' : '⭕️ ');
-//
-// 	const chef = lunchProps && parseTelegramUser(lunchProps.chef);
-// 	const chef2 = lunchProps && parseTelegramUser(lunchProps.chef2);
-// 	const cleaner = lunchProps && parseTelegramUser(lunchProps.cleaner);
-// 	const facilitator = practiseProps && parseTelegramUser(practiseProps.facilitator);
-// 	const guide = meditationProps && parseTelegramUser(meditationProps.guide);
-//
-// 	let keyboard = new InlineKeyboard();
-//
-// 	if (date.getDay() === 2 || date.getDay() === 4) {
-// 		keyboard = keyboard.text(check(guide) + 'Meditation Guide', key('guide')).row();
-// 	}
-//
-// 	keyboard = keyboard
-// 		.add(
-// 			facilitator
-// 				? InlineKeyboard.text('✅ Morning Practise', key('facilitator'))
-// 				: InlineKeyboard.url(
-// 						'⭕️ Morning Practise',
-// 						`https://t.me/EssenciaOrgaBot?start=practise_${dateStr}_${messageId}`
-// 					)
-// 		)
-// 		.row()
-// 		.text(check(chef) + 'Lunch Chef', key('chef'))
-// 		.text(check(chef2) + 'Lunch Chef', key('chef2'))
-// 		.row()
-// 		.text(check(cleaner) + 'Lunch Cleaning', key('cleaner'));
-//
-// 	return keyboard;
-// }
+function buttonStatus(title: string, assigned: boolean) {
+	return `${assigned ? '✅' : '⭕️'} ${title}`;
+}

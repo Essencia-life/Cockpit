@@ -268,12 +268,24 @@ export function parseTelegramUser(str?: string): TelegramUser | undefined {
 	return JSON.parse(str || 'null') ?? undefined;
 }
 
-function formatTelegramUser(user: TelegramUser) {
+export function formatTelegramUser(user: TelegramUser) {
 	if (user.id) {
 		return `<a href="tg://user?id=${user.id}">${user.first_name}</a>`;
 	}
 
 	return user.first_name;
+}
+
+export function formatTelegramUsers(users: TelegramUser[]) {
+	if (users.length === 0) return '❓️';
+	if (users.length === 1) return formatTelegramUser(users[0]);
+	if (users.length === 2) return users.map(formatTelegramUser).join(' & ');
+
+	return (
+		users.slice(0, -1).map(formatTelegramUser).join(', ') +
+		' & ' +
+		formatTelegramUser(users[users.length - 1])
+	);
 }
 
 export default new WeekPlan();
