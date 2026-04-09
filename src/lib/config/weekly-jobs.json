@@ -4,11 +4,17 @@
       "type": "daily",
       "calendar": "community",
       "name": "meditation",
-      "title": "Guided meditation",
+      "title": "Guided Meditation",
       "description": "",
       "location": "Shala",
-      "startTime": [7,0],
-      "endTime": [8,0],
+      "startTime": {
+        "hour": 7,
+        "minutes": 0
+      },
+      "endTime": {
+        "hour": 8,
+        "minutes": 0
+      },
       "weekdays": [
         2,
         4
@@ -16,7 +22,7 @@
       "jobs": [
         {
           "name": "guide",
-          "title": "Meditation Guide",
+          "title": "Guided Meditation",
           "persons": 1,
           "askDetails": true
         }
@@ -29,8 +35,14 @@
       "title": "Morning Practice",
       "description": "",
       "location": "Shala",
-      "startTime": [8,0],
-      "endTime": [9,0],
+      "startTime": {
+        "hour": 8,
+        "minutes": 0
+      },
+      "endTime": {
+        "hour": 9,
+        "minutes": 0
+      },
       "weekdays": [
         1,
         2,
@@ -52,10 +64,16 @@
       "calendar": "community",
       "name": "lunch",
       "title": "Lunch",
-      "description": "",
+      "description": "<b>Lunch preparation begins at 12:00.</b>\nFrom this time until 14:00, you lovingly prepare the meal, tend to the dish-washing station and bring the kitchen back into a state of calm and cleanliness.\n\n<b>Lunch cleaning</b> means guiding the leftovers to their next resting place in the fridge and washing the pods and bowls in which the meal was shared.\n\n⚠\uFE0F Plates and cutlery find their way back to clarity through the hands of those who enjoyed the meal at the dish-washing station!\n\n<b>A meal costs 8€ per person per day</b>, unless you are volunteering or have offered 2 hours of service for Essência on that day.\n\uD83D\uDCD5\uFE0F Please write your name into the red lunch book and make your contribution at the end of the week (or on the day of your departure, if you leave earlier) to our Lakshmi fairy, <a href=\"tg://user?id=5713837236\">Birdy</a>.",
       "location": "Fun Kitchen",
-      "startTime": [14,0],
-      "endTime": [15,0],
+      "startTime": {
+        "hour": 14,
+        "minutes": 0
+      },
+      "endTime": {
+        "hour": 15,
+        "minutes": 0
+      },
       "weekdays": [
         1,
         2,
@@ -81,9 +99,15 @@
       "calendar": "events",
       "name": "spa",
       "title": "SPArkling Night",
-      "description": "",
-      "startTime": [18, 0],
-      "endTime": [22, 0],
+      "description": "Join us for a cozy, playful evening of warmth and connection. Enjoy the sauna and hot tub, jump into our natural pond, gather around the campfire and sing together under the night sky. A relaxed night to unwind, connect and let the day fade away.\n\n<b>Contribution is 20€.</b>",
+      "startTime": {
+        "hour": 18,
+        "minutes": 0
+      },
+      "endTime": {
+        "hour": 22,
+        "minutes": 0
+      },
       "weekdays": [
         4
       ],
@@ -118,9 +142,14 @@
       "description": "",
       "jobs": [
         {
-          "name": "fairy",
-          "title": "Fairy",
+          "name": "village_fairy",
+          "title": "Village Fairy",
           "persons": 2
+        },
+        {
+          "name": "temple_fairy",
+          "title": "Temple Fairy",
+          "persons": 1
         }
       ]
     },
@@ -131,8 +160,14 @@
       "title": "Forum",
       "description": "",
       "location": "Shala",
-      "startTime": [12, 0],
-      "endTime": [13, 30],
+      "startTime": {
+        "hour": 12,
+        "minutes": 0
+      },
+      "endTime": {
+        "hour": 13,
+        "minutes": 30
+      },
       "weekday": 5,
       "phase": "NEW_MOON",
       "relation": "NOT_LAST_ON_OR_BEFORE",
@@ -151,8 +186,14 @@
       "title": "Innovations",
       "description": "",
       "location": "Hive",
-      "startTime": [12, 0],
-      "endTime": [13, 30],
+      "startTime": {
+        "hour": 12,
+        "minutes": 0
+      },
+      "endTime": {
+        "hour": 13,
+        "minutes": 30
+      },
       "weekday": 5,
       "phase": "NEW_MOON",
       "relation": "LAST_ON_OR_BEFORE",
