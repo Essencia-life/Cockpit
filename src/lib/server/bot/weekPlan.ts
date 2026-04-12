@@ -61,7 +61,7 @@ export class WeekPlanBot {
 		);
 	}
 
-	public async updateWeekPlanDay(messageId: number) {
+	private async updateWeekPlanDay(messageId: number) {
 		const groups = await this.getGroups();
 		const events = await weekPlanApi.getEventsByPlanMessageId(messageId);
 		const title = getEventGroupTitle(events[0]);
@@ -202,7 +202,7 @@ export class WeekPlanBot {
 
 	private setupStartHandler() {
 		const askDetailsReply = (type: string) =>
-			`Please let us know more about what ${type} you want to offer. First line a short title and following lines optional details.`;
+			`Please let us know more about what ${type} you want to offer. First line a short title and following lines optional details (e.g. are Kids welcome?).`;
 
 		this.bot.command('start', async (ctx) => {
 			const match = ctx.match.match(/^plan_(?<eventId>\w+)_(?<jobName>\w+)$/);
@@ -303,7 +303,7 @@ function getEventGroupTitle(event: CalendarEvent) {
 	return `<b>Week</b> ${start.setLocale('pt').toLocaleString({ day: 'numeric', month: 'numeric' })} - ${end.setLocale('pt').toLocaleString({ day: 'numeric', month: 'numeric' })}`;
 }
 
-function formatTelegramUsers(users: TelegramUser[]) {
+export function formatTelegramUsers(users: TelegramUser[]) {
 	if (users.length === 0) return '❓️';
 	if (users.length === 1) return formatTelegramUser(users[0]);
 	if (users.length === 2) return users.map(formatTelegramUser).join(' & ');

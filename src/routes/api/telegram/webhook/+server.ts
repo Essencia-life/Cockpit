@@ -14,7 +14,7 @@ export const PUT: RequestHandler = async ({ url }) => {
 		secret_token: BOT_SECRET_TOKEN,
 		allowed_updates: [
 			'message',
-			'edited_message',
+			// 'edited_message',
 			// "channel_post",
 			// "edited_channel_post",
 			// "business_connection",

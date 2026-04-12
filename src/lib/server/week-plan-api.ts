@@ -8,8 +8,7 @@ import {
 	type Weekday
 } from '$lib/utils/lunar-matching.ts';
 import lunarProvider, { type MoonPhase } from '$lib/utils/lunar-provider.ts';
-import { calendar_v3 } from 'googleapis';
-import { COMMUNITY_CALENDAR_ID } from '$env/static/private';
+import type { calendar_v3 } from 'googleapis';
 
 const timeZone = 'Europe/Lisbon';
 const configs = weeklyJobs.config as WeeklyJobsConfigs;
@@ -77,10 +76,12 @@ export interface EventProps {
 	type: string;
 	jobs: string;
 	planMessageId?: string;
-	agendaMessageId?: string;
 }
 
-export type EventPropsJobs = Record<string, { persons: TelegramUser[]; details: string }>;
+export type EventPropsJobs = Record<
+	string,
+	{ persons: TelegramUser[]; title: string; details: string }
+>;
 
 class WeekPlanApi {
 	async createEvents(weekStart: DateTime) {
@@ -102,7 +103,9 @@ class WeekPlanApi {
 							source: 'week-plan',
 							type: config.name,
 							jobs: JSON.stringify(
-								Object.fromEntries(config.jobs.map((jobDef) => [jobDef.name, { persons: [] }]))
+								Object.fromEntries(
+									config.jobs.map((jobDef) => [jobDef.name, { title: jobDef.title, persons: [] }])
+								)
 							)
 						} satisfies EventProps
 					}
@@ -128,7 +131,12 @@ class WeekPlanApi {
 									source: 'week-plan',
 									type: config.name,
 									jobs: JSON.stringify(
-										Object.fromEntries(config.jobs.map((jobDef) => [jobDef.name, { persons: [] }]))
+										Object.fromEntries(
+											config.jobs.map((jobDef) => [
+												jobDef.name,
+												{ title: jobDef.title, persons: [] }
+											])
+										)
 									)
 								}
 							}
