@@ -2,6 +2,9 @@ import { COMMUNITY_CALENDAR_ID, EVENTS_CALENDAR_ID } from '$env/static/private';
 import { type Bot, InlineKeyboard } from 'grammy';
 import type { BotConfig, BotGroups } from '$lib/server/bot/groups.ts';
 import { Calendar, type CalendarEvent } from '$lib/server/calendar.ts';
+import { DateTime } from 'luxon';
+import { type EventPropsJobs } from '$lib/server/week-plan-api.ts';
+import { formatTelegramUsers } from '$lib/server/bot/weekPlan.ts';
 
 const eventsCalendar = new Calendar(EVENTS_CALENDAR_ID);
 const communityCalendar = new Calendar(COMMUNITY_CALENDAR_ID);
@@ -13,7 +16,7 @@ export class AgendaBot {
 	) {
 		bot.callbackQuery(/^agenda:(?<date>\d{4}-\d{2}-\d{2}):(?<messageId>\d+)$/, async (ctx) => {
 			if (typeof ctx.match === 'object' && 'groups' in ctx.match) {
-				const date = new Date(ctx.match.groups!.date);
+				const date = DateTime.fromISO(ctx.match.groups!.date);
 				const messageId = parseInt(ctx.match.groups!.messageId);
 
 				try {
@@ -30,16 +33,13 @@ export class AgendaBot {
 
 	public async sendAgenda() {
 		const groups = await this.getGroups();
-		const today = new Date();
-		const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+		const tomorrow = DateTime.now().plus({ day: 1 });
 		const tomorrowEvents = await this.getEventsByDate(tomorrow);
-
-		// TODO: remove reply markup of yesterdays message?
 
 		if (tomorrowEvents.length) {
 			const message = await this.bot.api.sendMessage(
 				groups.Home,
-				formatAgenda(tomorrow, tomorrowEvents),
+				formatAgenda(tomorrow.toJSDate(), tomorrowEvents),
 				{
 					parse_mode: 'HTML',
 					message_thread_id: groups.HomeDailyInfoThread,
@@ -52,7 +52,7 @@ export class AgendaBot {
 			await this.bot.api.editMessageReplyMarkup(groups.Home, message.message_id, {
 				reply_markup: new InlineKeyboard().text(
 					'🔁️ Refresh',
-					`agenda:${tomorrow.toISOString().substring(0, 10)}:${message.message_id}`
+					`agenda:${tomorrow.toISODate()}:${message.message_id}`
 				)
 			});
 		} else {
@@ -60,20 +60,20 @@ export class AgendaBot {
 		}
 	}
 
-	public async updateAgenda(date: Date, messageId: number) {
+	public async updateAgenda(date: DateTime, messageId: number) {
 		const groups = await this.getGroups();
 
-		console.info(`Update agenda for date=${date} messageId=${messageId}`);
+		console.info(`Update agenda for date=${date.toISODate()} messageId=${messageId}`);
 
 		const events = await this.getEventsByDate(date);
-		const text = formatAgenda(date, events);
+		const text = formatAgenda(date.toJSDate(), events);
 
 		try {
 			await this.bot.api.editMessageText(groups.Home, messageId, text, {
 				parse_mode: 'HTML',
 				reply_markup: new InlineKeyboard().text(
 					'🔁️ Refresh',
-					`agenda:${date.toISOString().substring(0, 10)}:${messageId}`
+					`agenda:${date.toISODate()}:${messageId}`
 				),
 				link_preview_options: {
 					is_disabled: true
@@ -94,9 +94,9 @@ export class AgendaBot {
 		return groups;
 	}
 
-	private async getEventsByDate(date: Date) {
-		const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-		const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+	private async getEventsByDate(date: DateTime) {
+		const startOfDay = date.startOf('day').toJSDate();
+		const endOfDay = date.endOf('day').toJSDate();
 
 		const events = await eventsCalendar.getEvents([], startOfDay, endOfDay);
 		const communityEvents = await communityCalendar.getEvents([], startOfDay, endOfDay);
@@ -117,43 +117,80 @@ function formatLocation(location?: string | null) {
 }
 
 function formatDuration(event: CalendarEvent) {
-	const ms = Math.abs(Date.parse(event.end!.dateTime!) - Date.parse(event.start!.dateTime!));
+	if (!event.start?.dateTime || !event.end?.dateTime) return '';
 
-	const s = Math.floor(ms / 1000);
-	const m = Math.floor(s / 60);
-	const h = Math.floor(m / 60);
+	const start = DateTime.fromISO(event.start.dateTime);
+	const end = DateTime.fromISO(event.end.dateTime);
 
-	const duration = [];
+	const dur = end.diff(start).shiftTo('hours', 'minutes');
 
-	if (h) {
-		duration.push(h + 'h');
-	}
+	const h = Math.floor(dur.hours);
+	const m = Math.round(dur.minutes);
 
-	if (m % 60) {
-		duration.push((m % 60) + 'm');
-	}
+	const parts = [];
 
-	if (duration.length) {
-		return `(${duration.join(' ')})`;
+	if (h) parts.push(`${h}h`);
+	if (m) parts.push(`${m}m`);
+
+	return parts.length ? `(${parts.join(' ')})` : '';
+}
+
+function formatJobs(eventProps?: Record<string, string>) {
+	if (eventProps && eventProps.jobs) {
+		const assignedJobs: EventPropsJobs = JSON.parse(eventProps.jobs);
+		const block = [];
+
+		for (const { title, persons, details } of Object.values(assignedJobs)) {
+			if (!details) {
+				block.push(`${title}: ${formatTelegramUsers(persons)}`);
+			} else {
+				const [firstLine, rest] = details.split('\n', 2);
+
+				if (!rest) {
+					block.push(`${title}: ${firstLine} with ${formatTelegramUsers(persons)}`);
+				} else {
+					block.push(`${title}: ${firstLine} with ${formatTelegramUsers(persons)}`);
+					block.push(rest);
+				}
+			}
+		}
+
+		return block.join('\n');
 	}
 
 	return '';
 }
 
 function formatEvent(event: CalendarEvent): string {
-	const time = new Date(event.start!.dateTime!).toLocaleTimeString('en', {
-		timeZone: event.start?.timeZone ?? undefined,
-		hour12: false,
-		hour: '2-digit',
-		minute: '2-digit'
-	});
-	return `<blockquote expandable><b>${time}</b> ${event.summary} ${formatDuration(event)}
-${formatLocation(event.location)}
-${transformDescription(event.description ?? '…')}</blockquote>`;
+	const firstLine = [event.summary];
+
+	if (event.start?.dateTime) {
+		const time = DateTime.fromISO(event.start.dateTime)
+			.setZone(event.start.timeZone!)
+			.setLocale('en')
+			.toLocaleString({
+				hour12: false,
+				hour: '2-digit',
+				minute: '2-digit'
+			});
+		firstLine.unshift(`<b>${time}</b>`);
+		firstLine.push(formatDuration(event));
+	}
+
+	const lines = [
+		firstLine.join(' '),
+		formatLocation(event.location),
+		formatJobs(event.extendedProperties?.private),
+		transformDescription(event.description ?? '')
+	].filter(Boolean);
+
+	return `<blockquote expandable>${lines.join('\n')}</blockquote>`;
 }
 
 function byStartDate(a: CalendarEvent, b: CalendarEvent) {
-	return Date.parse(a.start!.dateTime!) - Date.parse(b.start!.dateTime!);
+	return (
+		Date.parse(a.start?.dateTime ?? '2222-12-22') - Date.parse(b.start?.dateTime ?? '2222-12-22')
+	);
 }
 
 function formatAgenda(date: Date, events: CalendarEvent[]) {

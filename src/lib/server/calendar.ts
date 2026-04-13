@@ -1,9 +1,15 @@
 import { google, type calendar_v3 } from 'googleapis';
-import { GOOGLE_API_USER, GOOGLE_API_KEY, COMMUNITY_CALENDAR_ID } from '$env/static/private';
+import {
+	GOOGLE_API_USER,
+	GOOGLE_API_KEY,
+	COMMUNITY_CALENDAR_ID,
+	GOOGLE_API_SUBJECT
+} from '$env/static/private';
 
 const auth = new google.auth.JWT({
 	email: GOOGLE_API_USER,
 	key: GOOGLE_API_KEY,
+	subject: GOOGLE_API_SUBJECT,
 	scopes: ['https://www.googleapis.com/auth/calendar']
 });
 

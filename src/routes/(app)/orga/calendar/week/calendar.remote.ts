@@ -5,7 +5,7 @@ import weekPlan, {
 	type EventPrivatePropsPractise,
 	type WeekPlanLunchProps,
 	type WeekPlanPractiseProps
-} from '$lib/server/week-plan';
+} from '$lib/server/week-plan-api.ts';
 
 export const getEvents = query(async () => {
 	const today = new Date();

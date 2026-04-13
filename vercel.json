@@ -7,7 +7,7 @@
 		},
 		{
 			"path": "/api/telegram/week-plan",
-			"schedule": "50 10 * * 0"
+			"schedule": "50 10 * * 5"
 		}
 	]
 }
