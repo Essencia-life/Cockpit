@@ -9,11 +9,11 @@
       "location": "Shala",
       "startTime": {
         "hour": 7,
-        "minutes": 0
+        "minute": 0
       },
       "endTime": {
         "hour": 8,
-        "minutes": 0
+        "minute": 0
       },
       "weekdays": [
         2,
@@ -37,11 +37,11 @@
       "location": "Shala",
       "startTime": {
         "hour": 8,
-        "minutes": 0
+        "minute": 0
       },
       "endTime": {
         "hour": 9,
-        "minutes": 0
+        "minute": 0
       },
       "weekdays": [
         1,
@@ -68,11 +68,11 @@
       "location": "Fun Kitchen",
       "startTime": {
         "hour": 14,
-        "minutes": 0
+        "minute": 0
       },
       "endTime": {
         "hour": 15,
-        "minutes": 0
+        "minute": 0
       },
       "weekdays": [
         1,
@@ -102,11 +102,11 @@
       "description": "Join us for a cozy, playful evening of warmth and connection. Enjoy the sauna and hot tub, jump into our natural pond, gather around the campfire and sing together under the night sky. A relaxed night to unwind, connect and let the day fade away.\n\n<b>Contribution is 20€.</b>",
       "startTime": {
         "hour": 18,
-        "minutes": 0
+        "minute": 0
       },
       "endTime": {
         "hour": 22,
-        "minutes": 0
+        "minute": 0
       },
       "weekdays": [
         4
@@ -172,11 +172,11 @@
       "location": "Shala",
       "startTime": {
         "hour": 12,
-        "minutes": 0
+        "minute": 0
       },
       "endTime": {
         "hour": 13,
-        "minutes": 30
+        "minute": 30
       },
       "weekday": 5,
       "phase": "NEW_MOON",
@@ -198,11 +198,11 @@
       "location": "Hive",
       "startTime": {
         "hour": 12,
-        "minutes": 0
+        "minute": 0
       },
       "endTime": {
         "hour": 13,
-        "minutes": 30
+        "minute": 30
       },
       "weekday": 5,
       "phase": "NEW_MOON",
