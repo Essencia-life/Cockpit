@@ -106,10 +106,13 @@ export class AgendaBot {
 }
 
 function transformDescription(description: string): string {
-	return description
-		.replaceAll(/<(br|\/li|\/ul)>/g, '\n')
-		.replaceAll('<li>', '• ')
-		.replaceAll('<ul>', '');
+	return (
+		'\n' +
+		description
+			.replaceAll(/<(br|\/li|\/ul)>/g, '\n')
+			.replaceAll('<li>', '• ')
+			.replaceAll('<ul>', '')
+	);
 }
 
 function formatLocation(location?: string | null) {
@@ -136,11 +139,13 @@ function formatDuration(event: CalendarEvent) {
 }
 
 function formatJobs(eventProps?: Record<string, string>) {
+	console.log(eventProps);
 	if (eventProps && eventProps.jobs) {
 		const assignedJobs: EventPropsJobs = JSON.parse(eventProps.jobs);
 		const block = [];
 
 		for (const { title, persons, details } of Object.values(assignedJobs)) {
+			console.log(title, details);
 			if (!details) {
 				block.push(`${title}: ${formatTelegramUsers(persons)}`);
 			} else {
