@@ -201,8 +201,14 @@ export class WeekPlanBot {
 	}
 
 	private setupStartHandler() {
-		const askDetailsReply = (type: string) =>
-			`Please let us know more about what ${type} you want to offer. First line a short title and following lines optional details (e.g. are Kids welcome?).`;
+		const askDetailsReply = <R>(
+			type: string,
+			tag: (strings: TemplateStringsArray, ...values: unknown[]) => R = noopTag as unknown as (
+				strings: TemplateStringsArray,
+				...values: unknown[]
+			) => R
+		) =>
+			tag`Please let us know more about what ${type} you want to offer. First line a short title and following lines optional details (e.g. are Kids welcome?).`;
 
 		this.bot.command('start', async (ctx) => {
 			const match = ctx.match.match(/^plan_(?<eventId>\w+)_(?<jobName>\w+)$/);
@@ -234,17 +240,15 @@ export class WeekPlanBot {
 				await weekPlanApi.assignToJob(eventId, assignedJobs, jobName, user);
 				await this.updateWeekPlanDay(messageId);
 
-				await ctx.reply(
-					`${askDetailsReply(config?.title ?? 'practice')}\n\n#${eventId}_${jobName}`,
-					{
-						reply_markup: { force_reply: true }
-					}
-				);
+				await ctx.reply(`${askDetailsReply(config?.title ?? jobName)}\n\n#${eventId}_${jobName}`, {
+					reply_markup: { force_reply: true }
+				});
 			}
 		});
 
 		this.bot.on('message:text', async (ctx, next) => {
-			const isAskDetails = new RegExp(askDetailsReply('.+'));
+			const isAskDetails = askDetailsReply('.+', safeRegex);
+
 			if (
 				!ctx.message.reply_to_message?.text ||
 				!isAskDetails.test(ctx.message.reply_to_message.text)
@@ -325,4 +329,28 @@ function formatTelegramUser(user: TelegramUser) {
 
 function buttonStatus(title: string, persons: number, assignedPersons: number) {
 	return `${'✅ '.repeat(assignedPersons)}${'⭕️ '.repeat(persons - assignedPersons)} ${title}`;
+}
+
+function noopTag(strings: TemplateStringsArray, ...values: unknown[]) {
+	return String.raw(strings, ...values);
+}
+
+if (!RegExp.escape) {
+	RegExp.escape = function (str: unknown) {
+		return String(str).replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
+	};
+}
+
+function safeRegex(strings: TemplateStringsArray, ...values: unknown[]) {
+	let pattern = '';
+
+	for (let i = 0; i < strings.length; i++) {
+		pattern += RegExp.escape(strings[i]);
+
+		if (i < values.length) {
+			pattern += values[i];
+		}
+	}
+
+	return new RegExp(pattern, 'su');
 }
