@@ -224,6 +224,40 @@
           "persons": 1
         }
       ]
+    },
+    {
+      "type": "daily",
+      "calendar": "community",
+      "name": "brush",
+      "title": "Brushcutting",
+      "description": "",
+      "startTime": {
+        "hour": 10,
+        "minute": 15
+      },
+      "endTime": {
+        "hour": 13,
+        "minute": 45
+      },
+      "weekdays": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "jobs": [
+        {
+          "name": "first_shift",
+          "title": "Brushcutting 10:15 - 12:00",
+          "persons": 1
+        },
+        {
+          "name": "second_shift",
+          "title": "Brurshcutting 12:00 - 13:45",
+          "persons": 1
+        }
+      ]
     }
   ]
 }
