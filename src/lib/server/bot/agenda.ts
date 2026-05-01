@@ -6,6 +6,8 @@ import { DateTime } from 'luxon';
 import { type EventPropsJobs } from '$lib/server/week-plan-api.ts';
 import { formatTelegramUsers } from '$lib/server/bot/weekPlan.ts';
 
+const timeZone = 'Europe/Lisbon';
+
 const eventsCalendar = new Calendar(EVENTS_CALENDAR_ID);
 const communityCalendar = new Calendar(COMMUNITY_CALENDAR_ID);
 
@@ -16,7 +18,7 @@ export class AgendaBot {
 	) {
 		bot.callbackQuery(/^agenda:(?<date>\d{4}-\d{2}-\d{2}):(?<messageId>\d+)$/, async (ctx) => {
 			if (typeof ctx.match === 'object' && 'groups' in ctx.match) {
-				const date = DateTime.fromISO(ctx.match.groups!.date);
+				const date = DateTime.fromISO(ctx.match.groups!.date).setZone(timeZone);
 				const messageId = parseInt(ctx.match.groups!.messageId);
 
 				try {
@@ -33,7 +35,7 @@ export class AgendaBot {
 
 	public async sendAgenda() {
 		const groups = await this.getGroups();
-		const tomorrow = DateTime.now().plus({ day: 1 });
+		const tomorrow = DateTime.now().setZone(timeZone).plus({ day: 1 });
 		const tomorrowEvents = await this.getEventsByDate(tomorrow);
 
 		if (tomorrowEvents.length) {
