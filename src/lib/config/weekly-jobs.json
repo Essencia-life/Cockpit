@@ -8,11 +8,11 @@
       "description": "If no one signed up as meditation guide it will be a silent meditation",
       "location": "Shala",
       "startTime": {
-        "hour": 7,
+        "hour": 6,
         "minute": 0
       },
       "endTime": {
-        "hour": 8,
+        "hour": 7,
         "minute": 0
       },
       "weekdays": [
@@ -36,11 +36,11 @@
       "description": "",
       "location": "Shala",
       "startTime": {
-        "hour": 8,
+        "hour": 7,
         "minute": 0
       },
       "endTime": {
-        "hour": 9,
+        "hour": 8,
         "minute": 0
       },
       "weekdays": [
