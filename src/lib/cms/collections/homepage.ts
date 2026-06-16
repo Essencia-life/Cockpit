@@ -25,40 +25,7 @@ export default {
 			label: 'Hero',
 			name: 'hero',
 			widget: 'object',
-			fields: [
-				{
-					name: 'video',
-					label: 'Video',
-					widget: 'object',
-					fields: [
-						{
-							name: 'landscape',
-							label: 'Landscape',
-							widget: 'file',
-							media_folder: '/static/media',
-							choose_url: false
-						},
-						{
-							name: 'portrait',
-							label: 'Portrait',
-							widget: 'file',
-							media_folder: '/static/media',
-							choose_url: false
-						}
-					]
-				},
-				{
-					name: 'fallback_image',
-					label: 'Fallback Image',
-					widget: 'object',
-					fields: [
-						{ name: 'landscape', label: 'Landscape', widget: 'file', choose_url: false },
-						{ name: 'portrait', label: 'Portrait', widget: 'file', choose_url: false }
-					]
-				},
-				{ name: 'slogan', label: 'Slogan' },
-				{ name: 'watch_button', label: 'Watch Button' }
-			]
+			fields: [{ name: 'slogan', label: 'Slogan' }]
 		},
 		{
 			name: 'sections',
