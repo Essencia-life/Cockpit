@@ -23,7 +23,13 @@ export default {
 				},
 				{ name: 'start', label: 'Start Date & Time', widget: 'datetime', picker_utc: true },
 				{ name: 'end', label: 'End Date & Time', widget: 'datetime', picker_utc: true },
-				{ name: 'cover_image', label: 'Cover Image', widget: 'file', choose_url: false },
+				{
+					name: 'cover_image',
+					label: 'Cover Image',
+					widget: 'image',
+					choose_url: false,
+					allow_multiple: false
+				},
 				{
 					name: 'short_description',
 					label: 'Short Description',
@@ -58,6 +64,25 @@ export default {
 					pattern: [
 						'https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?&//=]*)',
 						'Invalid URL'
+					]
+				},
+				{
+					name: 'organizers',
+					label: 'Organizers',
+					label_singular: 'Organizer',
+					widget: 'list',
+					fields: [
+						{ name: 'name', label: 'Name' },
+						{ name: 'description', label: 'Description' },
+						{
+							name: 'photo',
+							label: 'Photo',
+							widget: 'image',
+							choose_url: false,
+							allow_multiple: false,
+							media_folder: '/src/lib/assets/media/events/organizer',
+							public_folder: 'media/events/organizer'
+						}
 					]
 				}
 			]
