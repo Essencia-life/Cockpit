@@ -35,6 +35,30 @@ export default {
 					widget: 'markdown',
 					buttons: ['bold', 'italic', 'quote', 'link', 'bulleted-list', 'numbered-list'],
 					editor_components: []
+				},
+				{
+					name: 'booking_link',
+					label: 'Booking Link',
+					pattern: [
+						'https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?&//=]*)',
+						'Invalid URL'
+					]
+				},
+				{
+					name: 'info_link',
+					label: 'More Information Link',
+					pattern: [
+						'https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?&//=]*)',
+						'Invalid URL'
+					]
+				},
+				{
+					name: 'car_sharing_link',
+					label: 'Car-Sharing Group Link',
+					pattern: [
+						'https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?&//=]*)',
+						'Invalid URL'
+					]
 				}
 			]
 		}
