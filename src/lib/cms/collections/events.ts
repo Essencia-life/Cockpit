@@ -45,6 +45,7 @@ export default {
 				{
 					name: 'booking_link',
 					label: 'Booking Link',
+					required: false,
 					pattern: [
 						'https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?&//=]*)',
 						'Invalid URL'
@@ -53,6 +54,7 @@ export default {
 				{
 					name: 'info_link',
 					label: 'More Information Link',
+					required: false,
 					pattern: [
 						'https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?&//=]*)',
 						'Invalid URL'
@@ -61,6 +63,7 @@ export default {
 				{
 					name: 'car_sharing_link',
 					label: 'Car-Sharing Group Link',
+					required: false,
 					pattern: [
 						'https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?&//=]*)',
 						'Invalid URL'
@@ -71,6 +74,7 @@ export default {
 					label: 'Organizers',
 					label_singular: 'Organizer',
 					widget: 'list',
+					required: false,
 					fields: [
 						{ name: 'name', label: 'Name' },
 						{ name: 'description', label: 'Description' },
